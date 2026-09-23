@@ -259,7 +259,7 @@
 
             try {
                 await Promise.all([
-                    faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
                 ]);
@@ -422,12 +422,17 @@
                 const displaySize = { width: videoAtt.videoWidth, height: videoAtt.videoHeight };
                 faceapi.matchDimensions(canvasAtt, displaySize);
 
+                let isBusyAtt = false;
                 scanInterval = setInterval(async () => {
                     if (videoAtt.paused || videoAtt.ended) return;
+                    if (isBusyAtt) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
+                    isBusyAtt = true;
 
-                    const detections = await faceapi.detectAllFaces(videoAtt, new faceapi.SsdMobilenetv1Options())
+                    const detections = await faceapi.detectAllFaces(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
                                                     .withFaceLandmarks()
                                                     .withFaceDescriptors();
+
+                    isBusyAtt = false;
 
                     const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
@@ -501,12 +506,17 @@
                 const displaySize = { width: videoEnr.videoWidth, height: videoEnr.videoHeight };
                 faceapi.matchDimensions(canvasEnr, displaySize);
 
+                let isBusyEnr = false;
                 scanInterval = setInterval(async () => {
                     if (videoEnr.paused || videoEnr.ended) return;
+                    if (isBusyEnr) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
+                    isBusyEnr = true;
 
-                    const detection = await faceapi.detectSingleFace(videoEnr, new faceapi.SsdMobilenetv1Options())
+                    const detection = await faceapi.detectSingleFace(videoEnr, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
                                                    .withFaceLandmarks()
                                                    .withFaceDescriptor();
+
+                    isBusyEnr = false;
 
                     canvasEnr.getContext('2d').clearRect(0, 0, canvasEnr.width, canvasEnr.height);
 

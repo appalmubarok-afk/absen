@@ -691,7 +691,13 @@
         async function startCamera(videoElement) {
             if (currentStream) stopCamera();
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                // Resolusi dibatasi (bukan default kamera HP yang bisa 1080p+) supaya
+                // setiap frame lebih ringan & cepat diproses AI — resolusi tinggi
+                // tidak menambah akurasi deteksi wajah tapi bikin lambat.
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } },
+                    audio: false
+                });
                 videoElement.srcObject = stream;
                 currentStream = stream;
                 return true;
@@ -765,26 +771,29 @@
                     if (isBusyAtt) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
                     isBusyAtt = true;
 
-                    const detections = await faceapi.detectAllFaces(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
+                    // detectSingleFace jauh lebih cepat daripada detectAllFaces:
+                    // yang dipakai memang cuma 1 wajah utama, jadi tidak perlu
+                    // menghitung descriptor untuk semua wajah di frame.
+                    // inputSize diturunkan dari 320 -> 224 supaya lebih ringan
+                    // (cukup akurat untuk jarak wajah ke kamera saat absen).
+                    const detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
                                                     .withFaceLandmarks()
-                                                    .withFaceDescriptors();
+                                                    .withFaceDescriptor();
 
                     isBusyAtt = false;
 
-                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
-
                     canvasAtt.getContext('2d').clearRect(0, 0, canvasAtt.width, canvasAtt.height);
 
-                    if (detections.length === 0) {
+                    if (!detection) {
                         resetAttendanceUI();
                         return;
                     }
 
-                    faceapi.draw.drawDetections(canvasAtt, resizedDetections);
+                    const resizedDetection = faceapi.resizeResults(detection, displaySize);
+                    new faceapi.draw.DrawBox(resizedDetection.detection.box, { label: '', lineWidth: 3, boxColor: '#0E7C66' }).draw(canvasAtt);
 
                     if (faceMatcher) {
-                        const primaryFace = resizedDetections[0];
-                        const result = faceMatcher.findBestMatch(primaryFace.descriptor);
+                        const result = faceMatcher.findBestMatch(resizedDetection.descriptor);
 
                         if (result.label !== 'unknown') {
                             const split = result.label.split('|');
@@ -828,7 +837,7 @@
                             document.getElementById('face-guide-att').classList.remove('locked');
                         }
                     }
-                }, 300);
+                }, 150);
             });
         }
 

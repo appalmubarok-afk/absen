@@ -2,110 +2,171 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Absensiiiiii - SMP IT Al Mubarok</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Sistem Absensi Pengenalan Wajah - SMP IT Al Mubarok</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        :root {
+            --bg: #F6F7F5;
+            --surface: #FFFFFF;
+            --ink: #1F2A24;
+            --ink-soft: #6B7570;
+            --accent: #0E7C66;
+            --accent-soft: #E3F3EE;
+            --line: #E7EAE7;
+        }
+        body, html { margin: 0; padding: 0; height: 100%; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--ink);
+            height: 100%;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        h1, h2, h3, .display-font { font-family: 'Plus Jakarta Sans', sans-serif; }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1.75rem;
+        }
+
         .video-wrapper {
             position: relative; display: flex; justify-content: center; align-items: center;
-            background: #0f172a; border-radius: 0.75rem; overflow: hidden;
+            background: #16211C; border-radius: 1.25rem; overflow: hidden;
         }
         video { object-fit: cover; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;}
 
         .loader-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3); border-top: 4px solid #fff; border-radius: 50%;
-            width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block;
+            border: 3px solid rgba(255, 255, 255, 0.3); border-top: 3px solid #fff; border-radius: 50%;
+            width: 22px; height: 22px; animation: spin 1s linear infinite; display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);
-            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            background-color: rgba(20, 30, 25, 0.45); backdrop-filter: blur(6px);
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
         }
         .modal-overlay.show { opacity: 1; pointer-events: auto; }
-        .modal-content { transform: scale(0.9); transition: transform 0.3s ease; }
-        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-content { transform: scale(0.95) translateY(8px); transition: transform 0.25s ease; }
+        .modal-overlay.show .modal-content { transform: scale(1) translateY(0); }
+
+        /* Navigasi tab: bar bawah di HP, bar biasa di layar besar */
+        .tabbar {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+            background: var(--surface);
+            border-top: 1px solid var(--line);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .tabbar-btn {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 2px; padding: 10px 4px; color: var(--ink-soft); font-size: 0.7rem; font-weight: 600;
+        }
+        .tabbar-btn i { font-size: 1.05rem; }
+        .tabbar-btn.active { color: var(--accent); }
+
+        @media (min-width: 768px) {
+            .tabbar {
+                position: static; border-top: none; padding-bottom: 0;
+                background: transparent; margin-top: 1rem;
+            }
+            .tabbar-inner { justify-content: center; gap: 0.5rem; }
+            .tabbar-btn {
+                flex: none; flex-direction: row; gap: 8px; padding: 10px 20px;
+                border-radius: 999px; font-size: 0.85rem;
+            }
+            .tabbar-btn.active { background: var(--accent); color: #fff; }
+        }
     </style>
 </head>
-<body class="text-gray-800 h-screen flex flex-col">
+<body class="h-full flex flex-col">
 
-    <nav class="bg-indigo-600 text-white shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16 overflow-x-auto">
-                <div class="flex items-center flex-shrink-0 mr-6">
-                    <i class="fa-solid fa-expand text-2xl mr-2"></i>
-                    <span class="font-bold text-xl tracking-wide">Absen SMP IT Al Mubarok</span>
+    <header class="bg-[var(--surface)] border-b border-[var(--line)]">
+        <div class="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-[var(--accent)] text-white flex items-center justify-center">
+                    <i class="fa-solid fa-fingerprint text-sm"></i>
                 </div>
-                <div class="flex space-x-1 sm:space-x-4">
-                    <button onclick="switchTab('attendance')" id="tab-btn-attendance" class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-800 transition whitespace-nowrap">Absensi</button>
-                    <button onclick="switchTab('enroll')" id="tab-btn-enroll" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition whitespace-nowrap">Registrasi</button>
-                    <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition whitespace-nowrap">Rekap</button>
-                </div>
+                <span class="display-font font-bold text-[15px] sm:text-base leading-tight">Absen SMP IT<br class="sm:hidden"> Al Mubarok</span>
             </div>
+        </div>
+    </header>
+
+    <nav class="tabbar">
+        <div class="tabbar-inner max-w-5xl mx-auto flex md:flex">
+            <button onclick="switchTab('attendance')" id="tab-btn-attendance" class="tabbar-btn active">
+                <i class="fa-solid fa-camera-retro"></i><span>Absensi</span>
+            </button>
+            <button onclick="switchTab('enroll')" id="tab-btn-enroll" class="tabbar-btn">
+                <i class="fa-solid fa-address-card"></i><span>Registrasi</span>
+            </button>
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tabbar-btn">
+                <i class="fa-solid fa-table-list"></i><span>Rekap</span>
+            </button>
         </div>
     </nav>
 
     <!-- Notifikasi Status AI -->
-    <div id="ai-loading" class="bg-blue-500 text-white text-center py-2 px-4 flex items-center justify-center gap-3 shadow-md">
-        <div class="loader-spinner w-5 h-5 border-2"></div>
+    <div id="ai-loading" class="bg-[var(--accent)] text-white text-center py-2 px-4 flex items-center justify-center gap-3">
+        <div class="loader-spinner w-4 h-4 border-2"></div>
         <span class="font-medium text-sm">Menyiapkan model AI Pengenalan Wajah...</span>
     </div>
 
-    <div class="flex-grow p-4 sm:p-6 overflow-y-auto">
+    <div class="flex-grow p-4 sm:p-6 pb-24 md:pb-6 overflow-y-auto">
 
         <div id="tab-attendance" class="tab-content active max-w-5xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-camera-retro mr-2 text-indigo-600"></i> Scanner Presensi</h2>
-                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold" id="db-status-badge">Menghubungkan...</span>
+            <div class="card overflow-hidden">
+                <div class="p-5 sm:p-6 border-b border-[var(--line)] flex justify-between items-center">
+                    <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-camera-retro mr-2 text-[var(--accent)]"></i>Scanner Presensi</h2>
+                    <span class="px-3 py-1 bg-[var(--accent-soft)] text-[var(--accent)] rounded-full text-xs font-semibold" id="db-status-badge">Menghubungkan...</span>
                 </div>
 
-                <div class="p-6 flex flex-col lg:flex-row gap-8">
+                <div class="p-5 sm:p-6 flex flex-col lg:flex-row gap-6 sm:gap-8">
                     <!-- Kamera Area -->
                     <div class="flex-1">
-                        <div class="video-wrapper aspect-video w-full shadow-inner relative">
+                        <div class="video-wrapper aspect-video w-full relative">
                             <video id="video-attendance" autoplay muted playsinline class="w-full h-full object-cover hidden"></video>
                             <canvas id="canvas-attendance"></canvas>
-                            <div id="cam-placeholder-att" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                                <i class="fa-solid fa-video-slash text-5xl mb-3 opacity-50"></i>
-                                <span>Kamera Nonaktif</span>
+                            <div id="cam-placeholder-att" class="absolute inset-0 flex flex-col items-center justify-center text-white/40">
+                                <i class="fa-solid fa-video-slash text-4xl mb-3"></i>
+                                <span class="text-sm">Kamera Nonaktif</span>
                             </div>
                         </div>
-                        <div class="mt-6 flex justify-center gap-4">
-                            <button id="btn-start-att" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-6 rounded-xl shadow-md transition flex items-center disabled:opacity-50">
+                        <div class="mt-5 flex justify-center gap-3">
+                            <button id="btn-start-att" class="bg-[var(--accent)] hover:opacity-90 text-white font-semibold py-3 px-6 rounded-2xl transition flex items-center disabled:opacity-50">
                                 <i class="fa-solid fa-power-off mr-2"></i> Nyalakan Scanner
                             </button>
-                            <button id="btn-stop-att" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 px-6 rounded-xl transition flex items-center hidden">
+                            <button id="btn-stop-att" class="bg-[var(--bg)] border border-[var(--line)] hover:bg-gray-100 text-[var(--ink)] font-semibold py-3 px-6 rounded-2xl transition flex items-center hidden">
                                 Matikan
                             </button>
                         </div>
                     </div>
 
                     <!-- Status Area -->
-                    <div class="w-full lg:w-1/3 bg-gray-50 rounded-xl p-6 border border-gray-200 flex flex-col items-center text-center justify-center relative overflow-hidden">
+                    <div class="w-full lg:w-1/3 bg-[var(--bg)] rounded-2xl p-6 border border-[var(--line)] flex flex-col items-center text-center justify-center relative overflow-hidden">
 
-                        <div id="scan-pulse" class="absolute inset-0 bg-green-400 opacity-0 transition-opacity duration-500 rounded-xl pointer-events-none"></div>
+                        <div id="scan-pulse" class="absolute inset-0 bg-emerald-300 opacity-0 transition-opacity duration-500 rounded-2xl pointer-events-none"></div>
 
                         <div class="relative z-10 w-full flex flex-col items-center">
-                            <div id="avatar-circle" class="w-28 h-28 rounded-full bg-white border-4 border-gray-200 shadow-sm flex items-center justify-center mb-4 transition-all duration-300">
-                                <i class="fa-solid fa-user text-5xl text-gray-300"></i>
+                            <div id="avatar-circle" class="w-24 h-24 rounded-full bg-white border-4 border-[var(--line)] shadow-sm flex items-center justify-center mb-4 transition-all duration-300">
+                                <i class="fa-solid fa-user text-4xl text-gray-300"></i>
                             </div>
 
-                            <h3 id="att-name" class="text-2xl font-extrabold text-gray-800 mb-1">Mencari Wajah...</h3>
-                            <p id="att-confidence" class="text-sm text-gray-500 mb-6">-</p>
+                            <h3 id="att-name" class="display-font text-xl font-bold mb-1">Mencari Wajah...</h3>
+                            <p id="att-confidence" class="text-sm text-[var(--ink-soft)] mb-6">-</p>
 
-                            <button id="btn-absen" disabled class="w-full py-4 bg-green-500 hover:bg-green-600 text-white text-lg font-bold rounded-xl shadow-lg transition-transform transform active:scale-95 disabled:opacity-50 disabled:active:scale-100 disabled:cursor-not-allowed flex items-center justify-center">
+                            <button id="btn-absen" disabled class="w-full py-3.5 bg-emerald-500 text-white text-base font-bold rounded-2xl flex items-center justify-center disabled:opacity-50 cursor-default">
                                 <i class="fa-solid fa-fingerprint mr-2"></i>
-                                <span>Catat Kehadiran</span>
+                                <span>Absen Otomatis (min. 60%)</span>
                             </button>
                         </div>
                     </div>
@@ -114,42 +175,42 @@
         </div>
 
         <div id="tab-enroll" class="tab-content max-w-4xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                <div class="p-6 border-b border-gray-100 bg-gray-50">
-                    <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-address-card mr-2 text-indigo-600"></i> Pendaftaran Wajah (Enrollment)</h2>
-                    <p class="text-sm text-gray-500 mt-1">Data akan disimpan ke Google Sheets sebagai database.</p>
+            <div class="card overflow-hidden">
+                <div class="p-5 sm:p-6 border-b border-[var(--line)]">
+                    <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-address-card mr-2 text-[var(--accent)]"></i>Pendaftaran Wajah</h2>
+                    <p class="text-sm text-[var(--ink-soft)] mt-1">Data akan disimpan ke Google Sheets sebagai database.</p>
                 </div>
 
-                <div class="p-6 flex flex-col md:flex-row gap-8">
+                <div class="p-5 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8">
                     <!-- Form -->
-                    <div class="w-full md:w-1/2 space-y-5">
+                    <div class="w-full md:w-1/2 space-y-4 order-2 md:order-1">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">ID Karyawan/Siswa</label>
-                            <input type="text" id="enroll-id" placeholder="Misal: EMP-001" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                            <label class="block text-sm font-semibold mb-1.5">ID Karyawan/Siswa</label>
+                            <input type="text" id="enroll-id" placeholder="Misal: EMP-001" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Lengkap</label>
-                            <input type="text" id="enroll-name" placeholder="Nama Anda" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                            <label class="block text-sm font-semibold mb-1.5">Nama Lengkap</label>
+                            <input type="text" id="enroll-name" placeholder="Nama Anda" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
                         </div>
 
-                        <div class="pt-4">
-                            <button id="btn-enroll-save" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition disabled:opacity-50" disabled>
+                        <div class="pt-2">
+                            <button id="btn-enroll-save" class="w-full bg-[var(--accent)] hover:opacity-90 text-white font-bold py-3 px-4 rounded-2xl transition disabled:opacity-50" disabled>
                                 <i class="fa-solid fa-save mr-2"></i> Simpan Data Wajah
                             </button>
                         </div>
                     </div>
 
                     <!-- Kamera Enroll -->
-                    <div class="w-full md:w-1/2 flex flex-col items-center">
-                        <div class="video-wrapper aspect-square w-full max-w-sm shadow-md rounded-full overflow-hidden border-4 border-gray-100 relative">
+                    <div class="w-full md:w-1/2 flex flex-col items-center order-1 md:order-2">
+                        <div class="video-wrapper aspect-square w-full max-w-xs rounded-full overflow-hidden relative">
                             <video id="video-enroll" autoplay muted playsinline class="w-full h-full object-cover hidden"></video>
                             <canvas id="canvas-enroll"></canvas>
-                            <div id="cam-placeholder-enr" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-                                <i class="fa-solid fa-user-plus text-4xl mb-2 opacity-50"></i>
+                            <div id="cam-placeholder-enr" class="absolute inset-0 flex flex-col items-center justify-center text-white/40">
+                                <i class="fa-solid fa-user-plus text-3xl"></i>
                             </div>
                         </div>
 
-                        <button id="btn-start-enr" class="mt-6 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-2 px-6 rounded-full shadow-sm transition">
+                        <button id="btn-start-enr" class="mt-5 bg-white border border-[var(--line)] hover:bg-gray-50 font-semibold py-2 px-6 rounded-full transition text-sm">
                             <i class="fa-solid fa-camera mr-2"></i> Buka Kamera
                         </button>
                         <p id="enroll-status" class="mt-3 text-sm font-medium text-amber-600 hidden"><i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mendeteksi wajah...</p>
@@ -159,29 +220,29 @@
         </div>
 
         <div id="tab-dashboard" class="tab-content max-w-5xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <div class="card overflow-hidden">
+                <div class="p-5 sm:p-6 border-b border-[var(--line)] flex justify-between items-center gap-3">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-800"><i class="fa-solid fa-table-list mr-2 text-indigo-600"></i> Rekap Presensi</h2>
-                        <p class="text-sm text-gray-500 mt-1">Mengambil data dari Google Sheets secara real-time.</p>
+                        <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-table-list mr-2 text-[var(--accent)]"></i>Rekap Presensi</h2>
+                        <p class="text-sm text-[var(--ink-soft)] mt-1">Data dari Google Sheets secara real-time.</p>
                     </div>
-                    <button onclick="fetchLogs()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm text-sm font-medium hover:bg-gray-50 transition">
+                    <button onclick="fetchLogs()" class="px-4 py-2 bg-[var(--bg)] border border-[var(--line)] rounded-full text-sm font-medium hover:bg-gray-100 transition whitespace-nowrap">
                         <i class="fa-solid fa-rotate-right mr-1"></i> Muat Ulang
                     </button>
                 </div>
 
                 <div class="p-0 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+                    <table class="min-w-full divide-y divide-[var(--line)]">
+                        <thead>
                             <tr>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Waktu</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">ID User</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nama</th>
-                                <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Tipe</th>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Waktu</th>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">ID User</th>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Nama</th>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Tipe</th>
                             </tr>
                         </thead>
-                        <tbody id="log-table-body" class="bg-white divide-y divide-gray-200">
-                            <tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Klik "Muat Ulang" untuk melihat data...</td></tr>
+                        <tbody id="log-table-body" class="divide-y divide-[var(--line)]">
+                            <tr><td colspan="4" class="px-6 py-8 text-center text-[var(--ink-soft)]">Klik "Muat Ulang" untuk melihat data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -191,13 +252,13 @@
     </div>
 
     <div id="custom-modal" class="modal-overlay fixed inset-0 z-50 flex items-center justify-center">
-        <div class="modal-content bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 border border-gray-100 text-center">
-            <div id="modal-icon" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-                <i class="fa-solid fa-check text-3xl text-green-600"></i>
+        <div class="modal-content bg-white rounded-3xl p-6 max-w-sm w-full mx-4 text-center">
+            <div id="modal-icon" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 mb-4">
+                <i class="fa-solid fa-check text-3xl text-emerald-600"></i>
             </div>
-            <h3 id="modal-title" class="text-xl font-bold text-gray-900 mb-2">Sukses</h3>
-            <p id="modal-msg" class="text-gray-600 mb-6">Operasi berhasil dilakukan.</p>
-            <button onclick="closeModal()" class="w-full px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">
+            <h3 id="modal-title" class="display-font text-xl font-bold mb-2">Sukses</h3>
+            <p id="modal-msg" class="text-[var(--ink-soft)] mb-6">Operasi berhasil dilakukan.</p>
+            <button onclick="closeModal()" class="w-full px-4 py-3 bg-[var(--accent)] text-white font-bold rounded-2xl hover:opacity-90 transition">
                 Tutup
             </button>
         </div>
@@ -217,6 +278,13 @@
         // Kamera Stream
         let currentStream = null;
         let scanInterval = null;
+
+        // Kontrol Absen Otomatis
+        const AUTO_THRESHOLD = 60;       // ambang akurasi minimal untuk auto-simpan (%)
+        const AUTO_COOLDOWN_MS = 5000;   // jeda sebelum ID yang sama bisa absen otomatis lagi
+        let isAutoSaving = false;
+        let lastAutoId = null;
+        let lastAutoTime = 0;
 
         // Referensi Elemen UI Tab Absensi
         const videoAtt = document.getElementById('video-attendance');
@@ -351,6 +419,9 @@
                     hideLoadingModal();
                     showModal("Error", "Gagal mencatat kehadiran. Periksa koneksi Anda.", "error");
                     btnAbsen.disabled = false;
+                })
+                .finally(() => {
+                    isAutoSaving = false; // buka kunci supaya ID lain (atau ID sama setelah cooldown) bisa diproses lagi
                 });
         }
 
@@ -468,6 +539,19 @@
                             btnAbsen.dataset.userId = id;
                             btnAbsen.dataset.userName = name;
                             btnAbsen.dataset.accuracy = accuracy;
+
+                            // === ABSEN OTOMATIS ===
+                            // Simpan sendiri kalau akurasi >= AUTO_THRESHOLD, tidak sedang
+                            // menyimpan proses lain, dan ID ini belum absen dalam masa cooldown.
+                            const now = Date.now();
+                            const sudahCooldown = !(id === lastAutoId && (now - lastAutoTime) < AUTO_COOLDOWN_MS);
+
+                            if (accuracy >= AUTO_THRESHOLD && !isAutoSaving && sudahCooldown) {
+                                isAutoSaving = true;
+                                lastAutoId = id;
+                                lastAutoTime = now;
+                                saveAttendanceLogToDB(id, name, accuracy);
+                            }
                         } else {
                             attName.innerText = "Tidak Dikenali";
                             attConfidence.innerText = "-";
@@ -575,7 +659,7 @@
 
         function fetchLogs() {
             const tbody = document.getElementById('log-table-body');
-            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center"><div class="loader-spinner border-indigo-500 border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center"><div class="loader-spinner border-[var(--accent)] border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
 
             callGAS('getAttendanceLogs').then((res) => {
                 if (res.success) {
@@ -624,11 +708,11 @@
             const btns = ['attendance', 'enroll', 'dashboard'];
             btns.forEach(id => {
                 const btn = document.getElementById(`tab-btn-${id}`);
-                btn.className = "px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition whitespace-nowrap";
+                btn.classList.remove('active');
             });
 
             const activeBtn = document.getElementById(`tab-btn-${tabId}`);
-            activeBtn.className = "px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-800 transition whitespace-nowrap";
+            activeBtn.classList.add('active');
 
             if (tabId === 'dashboard') fetchLogs();
             if (tabId === 'enroll') resetEnrollForm();
@@ -646,14 +730,14 @@
             iconEl.className = "fa-solid text-3xl";
 
             if(type === 'success') {
-                iconDiv.classList.add('bg-green-100');
-                iconEl.classList.add('fa-check', 'text-green-600');
+                iconDiv.classList.add('bg-emerald-50');
+                iconEl.classList.add('fa-check', 'text-emerald-600');
             } else if (type === 'error') {
-                iconDiv.classList.add('bg-red-100');
-                iconEl.classList.add('fa-xmark', 'text-red-600');
+                iconDiv.classList.add('bg-red-50');
+                iconEl.classList.add('fa-xmark', 'text-red-500');
             } else {
-                iconDiv.classList.add('bg-blue-100');
-                iconEl.classList.add('fa-info', 'text-blue-600');
+                iconDiv.classList.add('bg-[var(--accent-soft)]');
+                iconEl.classList.add('fa-info', 'text-[var(--accent)]');
             }
 
             document.getElementById('custom-modal').classList.add('show');
@@ -669,7 +753,7 @@
 
             const iconDiv = document.getElementById('modal-icon');
             iconDiv.className = "mx-auto flex items-center justify-center mb-4";
-            iconDiv.innerHTML = `<div class="loader-spinner border-indigo-600 border-t-transparent w-10 h-10 border-4"></div>`;
+            iconDiv.innerHTML = `<div class="loader-spinner border-[var(--accent)] border-t-transparent w-10 h-10 border-4"></div>`;
 
             document.querySelector('#custom-modal button').style.display = 'none';
             document.getElementById('custom-modal').classList.add('show');

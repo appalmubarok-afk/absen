@@ -413,16 +413,36 @@
         // Content-Type manual, supaya fetch() memakai default
         // "text/plain" dan browser TIDAK mengirim preflight OPTIONS
         // (Apps Script tidak mendukung preflight CORS).
-        async function callGAS(action, payload) {
+        async function callGAS(action, payload, timeoutMs = 10000) {
             const body = JSON.stringify(Object.assign({ action: action }, payload || {}));
-            const res = await fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST',
-                body: body
-            });
-            if (!res.ok) {
-                throw new Error('HTTP ' + res.status);
+
+            // Batas waktu tunggu respons dari Apps Script. Kadang server SUDAH
+            // selesai memproses (data sudah masuk ke Sheet) tapi responsnya
+            // lambat/tidak sampai balik ke browser -- tanpa timeout, modal
+            // "Mohon Tunggu" akan nyangkut selamanya. Dengan ini, kalau lewat
+            // 10 detik, request dianggap gagal (dan UI langsung ditutup),
+            // walau kemungkinan data sebenarnya sudah tersimpan di server.
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const res = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: body,
+                    signal: controller.signal
+                });
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+                return await res.json();
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    throw new Error('TIMEOUT');
+                }
+                throw err;
+            } finally {
+                clearTimeout(timeoutId);
             }
-            return res.json();
         }
 
         // --- 3. Inisialisasi Aplikasi ---
@@ -689,7 +709,11 @@
                 })
                 .catch((err) => {
                     hideLoadingModal();
-                    showModal("Error", "Gagal mencatat kehadiran. Periksa koneksi Anda.", "error");
+                    if (err && err.message === 'TIMEOUT') {
+                        showModal("Respons Lama", "Server lama merespons. Absen kemungkinan SUDAH tercatat -- cek tab Rekap untuk memastikan.", "info");
+                    } else {
+                        showModal("Error", "Gagal mencatat kehadiran. Periksa koneksi Anda.", "error");
+                    }
                     btnAbsen.disabled = false;
                 })
                 .finally(() => {

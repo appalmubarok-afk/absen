@@ -265,6 +265,43 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Pengaturan Jam Absensi (hanya guru login) -->
+            <div id="settings-area" class="card overflow-hidden mt-6 hidden">
+                <div class="p-5 sm:p-6 border-b border-[var(--line)]">
+                    <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-clock mr-2 text-[var(--accent)]"></i>Pengaturan Jam Absensi</h2>
+                    <p class="text-sm text-[var(--ink-soft)] mt-1">Atur rentang jam masuk, batas telat, dan jam pulang. Absen masuk/telat hanya mengambil scan pertama hari itu, absen pulang mengambil scan terakhir.</p>
+                </div>
+                <div class="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Jam Masuk Mulai</label>
+                        <input type="time" id="set-jam-masuk-mulai" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Batas Tidak Telat</label>
+                        <input type="time" id="set-batas-telat" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Jam Masuk Ditutup</label>
+                        <input type="time" id="set-jam-masuk-selesai" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div></div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Jam Pulang Mulai</label>
+                        <input type="time" id="set-jam-pulang-mulai" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Jam Pulang Selesai</label>
+                        <input type="time" id="set-jam-pulang-selesai" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div class="sm:col-span-2 pt-2">
+                        <button id="btn-save-settings" class="w-full sm:w-auto bg-[var(--accent)] hover:opacity-90 text-white font-bold py-3 px-6 rounded-2xl transition">
+                            <i class="fa-solid fa-floppy-disk mr-2"></i> Simpan Pengaturan
+                        </button>
+                        <p id="settings-status" class="text-sm font-medium mt-2 hidden"></p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="tab-dashboard" class="tab-content max-w-5xl mx-auto">
@@ -472,6 +509,8 @@
         }
 
         // --- Login / Logout Guru ---
+        const settingsArea = document.getElementById('settings-area');
+
         function showEnrollGate() {
             const guruNama = sessionStorage.getItem('guru_nama');
             const guruUsername = sessionStorage.getItem('guru_username');
@@ -479,15 +518,72 @@
             if (guruNama && guruUsername) {
                 enrollLoginArea.classList.add('hidden');
                 enrollFormArea.classList.remove('hidden');
+                settingsArea.classList.remove('hidden');
                 document.getElementById('guru-nama-badge').innerText = guruNama;
+                loadSettingsForm();
             } else {
                 enrollLoginArea.classList.remove('hidden');
                 enrollFormArea.classList.add('hidden');
+                settingsArea.classList.add('hidden');
                 document.getElementById('guru-username').value = '';
                 document.getElementById('guru-password').value = '';
                 loginError.classList.add('hidden');
             }
         }
+
+        function loadSettingsForm() {
+            callGAS('getSettings').then((res) => {
+                if (res.success && res.data) {
+                    document.getElementById('set-jam-masuk-mulai').value = res.data.jamMasukMulai;
+                    document.getElementById('set-batas-telat').value = res.data.batasTelat;
+                    document.getElementById('set-jam-masuk-selesai').value = res.data.jamMasukSelesai;
+                    document.getElementById('set-jam-pulang-mulai').value = res.data.jamPulangMulai;
+                    document.getElementById('set-jam-pulang-selesai').value = res.data.jamPulangSelesai;
+                }
+            }).catch(() => {});
+        }
+
+        document.getElementById('btn-save-settings').addEventListener('click', () => {
+            const btn = document.getElementById('btn-save-settings');
+            const statusEl = document.getElementById('settings-status');
+
+            const settings = {
+                jamMasukMulai: document.getElementById('set-jam-masuk-mulai').value,
+                batasTelat: document.getElementById('set-batas-telat').value,
+                jamMasukSelesai: document.getElementById('set-jam-masuk-selesai').value,
+                jamPulangMulai: document.getElementById('set-jam-pulang-mulai').value,
+                jamPulangSelesai: document.getElementById('set-jam-pulang-selesai').value
+            };
+
+            if (!settings.jamMasukMulai || !settings.batasTelat || !settings.jamMasukSelesai || !settings.jamPulangMulai || !settings.jamPulangSelesai) {
+                statusEl.innerText = "Semua jam wajib diisi.";
+                statusEl.className = "text-sm font-medium mt-2 text-red-500";
+                statusEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            statusEl.classList.add('hidden');
+
+            callGAS('saveSettings', {
+                settings: settings,
+                guruUsername: sessionStorage.getItem('guru_username'),
+                guruPassword: sessionStorage.getItem('guru_password')
+            }).then((res) => {
+                btn.disabled = false;
+                statusEl.innerText = res.message;
+                statusEl.className = "text-sm font-medium mt-2 " + (res.success ? "text-emerald-600" : "text-red-500");
+                statusEl.classList.remove('hidden');
+                if (!res.success && res.message && res.message.indexOf("Akses ditolak") !== -1) {
+                    logoutGuru();
+                }
+            }).catch(() => {
+                btn.disabled = false;
+                statusEl.innerText = "Gagal terhubung ke server.";
+                statusEl.className = "text-sm font-medium mt-2 text-red-500";
+                statusEl.classList.remove('hidden');
+            });
+        });
 
         btnGuruLogin.addEventListener('click', () => {
             const username = document.getElementById('guru-username').value.trim();
@@ -541,10 +637,14 @@
             callGAS('recordAttendance', { id: id, name: name, accuracy: accuracy })
                 .then((res) => {
                     hideLoadingModal();
-                    showModal("Absen Tercatat!", res.message, "success");
 
-                    document.getElementById('scan-pulse').classList.add('opacity-100');
-                    setTimeout(() => { document.getElementById('scan-pulse').classList.remove('opacity-100'); }, 1000);
+                    if (res.success) {
+                        showModal("Absen Tercatat!", res.message, "success");
+                        document.getElementById('scan-pulse').classList.add('opacity-100');
+                        setTimeout(() => { document.getElementById('scan-pulse').classList.remove('opacity-100'); }, 1000);
+                    } else {
+                        showModal("Absen Tidak Disimpan", res.message, "error");
+                    }
                 })
                 .catch((err) => {
                     hideLoadingModal();
@@ -824,12 +924,15 @@
 
             logs.forEach(log => {
                 const tr = document.createElement('tr');
+                const badgeClass = log.tipe === 'Telat' ? 'bg-amber-100 text-amber-800'
+                                  : log.tipe === 'Pulang' ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-green-100 text-green-800';
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.tanggal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.waktu}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${log.id}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.nama}</td>
-                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">${log.tipe}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">${log.tipe}</span></td>
                 `;
                 tbody.appendChild(tr);
             });

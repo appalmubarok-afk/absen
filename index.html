@@ -175,10 +175,42 @@
         </div>
 
         <div id="tab-enroll" class="tab-content max-w-4xl mx-auto">
-            <div class="card overflow-hidden">
+
+            <!-- Gerbang Login Guru -->
+            <div id="enroll-login-area" class="card overflow-hidden">
                 <div class="p-5 sm:p-6 border-b border-[var(--line)]">
-                    <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-address-card mr-2 text-[var(--accent)]"></i>Pendaftaran Wajah</h2>
-                    <p class="text-sm text-[var(--ink-soft)] mt-1">Data akan disimpan ke Google Sheets sebagai database.</p>
+                    <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-lock mr-2 text-[var(--accent)]"></i>Login Guru</h2>
+                    <p class="text-sm text-[var(--ink-soft)] mt-1">Hanya guru terdaftar yang boleh mendaftarkan wajah baru.</p>
+                </div>
+                <div class="p-5 sm:p-6 max-w-sm mx-auto space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Username</label>
+                        <input type="text" id="guru-username" placeholder="Username guru" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1.5">Password</label>
+                        <input type="password" id="guru-password" placeholder="Password" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                    </div>
+                    <p id="login-error" class="text-sm font-medium text-red-500 hidden"></p>
+                    <button id="btn-guru-login" class="w-full bg-[var(--accent)] hover:opacity-90 text-white font-bold py-3 px-4 rounded-2xl transition">
+                        <i class="fa-solid fa-right-to-bracket mr-2"></i> Login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Pendaftaran (hanya muncul setelah login) -->
+            <div id="enroll-form-area" class="card overflow-hidden hidden">
+                <div class="p-5 sm:p-6 border-b border-[var(--line)] flex justify-between items-start gap-3">
+                    <div>
+                        <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-address-card mr-2 text-[var(--accent)]"></i>Pendaftaran Wajah</h2>
+                        <p class="text-sm text-[var(--ink-soft)] mt-1">Data akan disimpan ke Google Sheets sebagai database.</p>
+                    </div>
+                    <div class="text-right whitespace-nowrap">
+                        <p class="text-xs text-[var(--ink-soft)] mb-1">Masuk sebagai <span id="guru-nama-badge" class="font-semibold text-[var(--ink)]"></span></p>
+                        <button onclick="logoutGuru()" class="text-xs font-semibold text-red-500 hover:underline">
+                            <i class="fa-solid fa-right-from-bracket mr-1"></i>Keluar
+                        </button>
+                    </div>
                 </div>
 
                 <div class="p-5 sm:p-6 flex flex-col md:flex-row gap-6 sm:gap-8">
@@ -235,6 +267,7 @@
                     <table class="min-w-full divide-y divide-[var(--line)]">
                         <thead>
                             <tr>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Tanggal</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Waktu</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">ID User</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Nama</th>
@@ -242,7 +275,7 @@
                             </tr>
                         </thead>
                         <tbody id="log-table-body" class="divide-y divide-[var(--line)]">
-                            <tr><td colspan="4" class="px-6 py-8 text-center text-[var(--ink-soft)]">Klik "Muat Ulang" untuk melihat data...</td></tr>
+                            <tr><td colspan="5" class="px-6 py-8 text-center text-[var(--ink-soft)]">Klik "Muat Ulang" untuk melihat data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -301,6 +334,12 @@
         const btnStartEnr = document.getElementById('btn-start-enr');
         const btnEnrollSave = document.getElementById('btn-enroll-save');
         let tempFaceDescriptor = null;
+
+        // Referensi Elemen UI Login Guru
+        const enrollLoginArea = document.getElementById('enroll-login-area');
+        const enrollFormArea = document.getElementById('enroll-form-area');
+        const btnGuruLogin = document.getElementById('btn-guru-login');
+        const loginError = document.getElementById('login-error');
 
         // =========================================================
         // 2. HELPER — Komunikasi ke Apps Script lewat fetch()
@@ -384,9 +423,18 @@
         function saveFaceToDB(id, name, descriptorArray) {
             const descriptorJson = JSON.stringify(Array.from(descriptorArray));
 
+            const guruUsername = sessionStorage.getItem('guru_username');
+            const guruPassword = sessionStorage.getItem('guru_password');
+
+            if (!guruUsername || !guruPassword) {
+                showModal("Sesi Berakhir", "Silakan login sebagai guru terlebih dahulu.", "error");
+                showEnrollGate();
+                return;
+            }
+
             showLoadingModal("Menyimpan ke Database...");
 
-            callGAS('saveUser', { id: id, name: name, descriptorJsonStr: descriptorJson })
+            callGAS('saveUser', { id: id, name: name, descriptorJsonStr: descriptorJson, guruUsername: guruUsername, guruPassword: guruPassword })
                 .then((res) => {
                     hideLoadingModal();
                     if (res.success) {
@@ -395,12 +443,79 @@
                         resetEnrollForm();
                     } else {
                         showModal("Gagal", res.message, "error");
+                        // Jika akses ditolak (sesi tidak valid lagi), paksa login ulang
+                        if (res.message && res.message.indexOf("Akses ditolak") !== -1) {
+                            logoutGuru();
+                        }
                     }
                 })
                 .catch((err) => {
                     hideLoadingModal();
                     showModal("Error", "Koneksi ke Apps Script gagal.", "error");
                 });
+        }
+
+        // --- Login / Logout Guru ---
+        function showEnrollGate() {
+            const guruNama = sessionStorage.getItem('guru_nama');
+            const guruUsername = sessionStorage.getItem('guru_username');
+
+            if (guruNama && guruUsername) {
+                enrollLoginArea.classList.add('hidden');
+                enrollFormArea.classList.remove('hidden');
+                document.getElementById('guru-nama-badge').innerText = guruNama;
+            } else {
+                enrollLoginArea.classList.remove('hidden');
+                enrollFormArea.classList.add('hidden');
+                document.getElementById('guru-username').value = '';
+                document.getElementById('guru-password').value = '';
+                loginError.classList.add('hidden');
+            }
+        }
+
+        btnGuruLogin.addEventListener('click', () => {
+            const username = document.getElementById('guru-username').value.trim();
+            const password = document.getElementById('guru-password').value;
+
+            loginError.classList.add('hidden');
+            if (!username || !password) {
+                loginError.innerText = "Username dan password wajib diisi.";
+                loginError.classList.remove('hidden');
+                return;
+            }
+
+            btnGuruLogin.disabled = true;
+            btnGuruLogin.innerHTML = '<div class="loader-spinner border-white border-t-transparent w-4 h-4 border-2 mx-auto"></div>';
+
+            callGAS('loginGuru', { username: username, password: password })
+                .then((res) => {
+                    btnGuruLogin.disabled = false;
+                    btnGuruLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Login';
+
+                    if (res.success) {
+                        sessionStorage.setItem('guru_username', username);
+                        sessionStorage.setItem('guru_password', password);
+                        sessionStorage.setItem('guru_nama', res.nama || username);
+                        showEnrollGate();
+                    } else {
+                        loginError.innerText = res.message || "Login gagal.";
+                        loginError.classList.remove('hidden');
+                    }
+                })
+                .catch(() => {
+                    btnGuruLogin.disabled = false;
+                    btnGuruLogin.innerHTML = '<i class="fa-solid fa-right-to-bracket mr-2"></i> Login';
+                    loginError.innerText = "Gagal terhubung ke server.";
+                    loginError.classList.remove('hidden');
+                });
+        });
+
+        function logoutGuru() {
+            sessionStorage.removeItem('guru_username');
+            sessionStorage.removeItem('guru_password');
+            sessionStorage.removeItem('guru_nama');
+            resetEnrollForm();
+            showEnrollGate();
         }
 
         function saveAttendanceLogToDB(id, name, accuracy) {
@@ -659,16 +774,16 @@
 
         function fetchLogs() {
             const tbody = document.getElementById('log-table-body');
-            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center"><div class="loader-spinner border-[var(--accent)] border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center"><div class="loader-spinner border-[var(--accent)] border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
 
             callGAS('getAttendanceLogs').then((res) => {
                 if (res.success) {
                     renderTableLogs(res.data);
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Gagal memuat data.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-500">Gagal memuat data.</td></tr>`;
                 }
             }).catch(() => {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
             });
         }
 
@@ -677,13 +792,14 @@
             tbody.innerHTML = '';
 
             if(!logs || logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Belum ada data absensi.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Belum ada data absensi.</td></tr>`;
                 return;
             }
 
             logs.forEach(log => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.tanggal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.waktu}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${log.id}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.nama}</td>
@@ -715,7 +831,10 @@
             activeBtn.classList.add('active');
 
             if (tabId === 'dashboard') fetchLogs();
-            if (tabId === 'enroll') resetEnrollForm();
+            if (tabId === 'enroll') {
+                resetEnrollForm();
+                showEnrollGate();
+            }
         }
 
         // --- Custom Modal ---

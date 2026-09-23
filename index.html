@@ -430,6 +430,15 @@
             document.getElementById('db-status-badge').innerHTML = "<i class='fa-solid fa-cloud mr-1'></i> Terhubung ke Google Sheets";
 
             try {
+                // Paksa pakai backend WebGL (GPU) untuk face-api/tensorflow.js.
+                // Kalau backend ini tidak di-set eksplisit, sebagian browser/HP
+                // otomatis jatuh ke backend 'cpu' yang JAUH lebih lambat untuk
+                // deteksi wajah real-time.
+                if (faceapi.tf && faceapi.tf.setBackend) {
+                    await faceapi.tf.setBackend('webgl');
+                    await faceapi.tf.ready();
+                }
+
                 await Promise.all([
                     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
                     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
@@ -691,11 +700,11 @@
         async function startCamera(videoElement) {
             if (currentStream) stopCamera();
             try {
-                // Resolusi dibatasi (bukan default kamera HP yang bisa 1080p+) supaya
-                // setiap frame lebih ringan & cepat diproses AI — resolusi tinggi
-                // tidak menambah akurasi deteksi wajah tapi bikin lambat.
+                // Resolusi dibatasi lebih kecil lagi (320x320) supaya setiap frame
+                // seringan mungkin diproses AI. Untuk kebutuhan absen (wajah dekat
+                // kamera), resolusi sekecil ini masih cukup untuk deteksi akurat.
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } },
+                    video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 320 } },
                     audio: false
                 });
                 videoElement.srcObject = stream;
@@ -776,7 +785,9 @@
                     // menghitung descriptor untuk semua wajah di frame.
                     // inputSize diturunkan dari 320 -> 224 supaya lebih ringan
                     // (cukup akurat untuk jarak wajah ke kamera saat absen).
-                    const detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+                    // inputSize diturunkan lagi 224 -> 160 (nilai valid terkecil yang
+                    // masih wajar untuk face-api.js) supaya proses AI seringan mungkin.
+                    const detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
                                                     .withFaceLandmarks()
                                                     .withFaceDescriptor();
 

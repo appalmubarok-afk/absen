@@ -239,6 +239,11 @@
                             <label class="block text-sm font-semibold mb-1.5">Nama Lengkap</label>
                             <input type="text" id="enroll-name" placeholder="Nama Anda" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
                         </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1.5">Kelas</label>
+                            <input type="text" id="enroll-kelas" list="kelas-datalist" placeholder="Misal: 7A" class="w-full px-4 py-3 rounded-2xl border border-[var(--line)] bg-[var(--bg)] focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] outline-none transition">
+                            <datalist id="kelas-datalist"></datalist>
+                        </div>
 
                         <div class="pt-2">
                             <button id="btn-enroll-save" class="w-full bg-[var(--accent)] hover:opacity-90 text-white font-bold py-3 px-4 rounded-2xl transition disabled:opacity-50" disabled>
@@ -311,9 +316,14 @@
                         <h2 class="display-font text-lg font-bold"><i class="fa-solid fa-table-list mr-2 text-[var(--accent)]"></i>Rekap Presensi</h2>
                         <p class="text-sm text-[var(--ink-soft)] mt-1">Data dari Google Sheets secara real-time.</p>
                     </div>
-                    <button onclick="fetchLogs()" class="px-4 py-2 bg-[var(--bg)] border border-[var(--line)] rounded-full text-sm font-medium hover:bg-gray-100 transition whitespace-nowrap">
-                        <i class="fa-solid fa-rotate-right mr-1"></i> Muat Ulang
-                    </button>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select id="rekap-kelas-filter" onchange="fetchLogs()" class="px-4 py-2 bg-[var(--bg)] border border-[var(--line)] rounded-full text-sm font-medium outline-none focus:ring-2 focus:ring-[var(--accent)]">
+                            <option value="">Semua Kelas</option>
+                        </select>
+                        <button onclick="fetchLogs()" class="px-4 py-2 bg-[var(--bg)] border border-[var(--line)] rounded-full text-sm font-medium hover:bg-gray-100 transition whitespace-nowrap">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Muat Ulang
+                        </button>
+                    </div>
                 </div>
 
                 <div class="p-0 overflow-x-auto">
@@ -324,12 +334,13 @@
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Waktu</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">ID User</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Nama</th>
+                                <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Kelas</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Tipe</th>
                                 <th scope="col" class="px-5 sm:px-6 py-3.5 text-left text-xs font-bold text-[var(--ink-soft)] uppercase tracking-wider">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody id="log-table-body" class="divide-y divide-[var(--line)]">
-                            <tr><td colspan="6" class="px-6 py-8 text-center text-[var(--ink-soft)]">Klik "Muat Ulang" untuk melihat data...</td></tr>
+                            <tr><td colspan="7" class="px-6 py-8 text-center text-[var(--ink-soft)]">Klik "Muat Ulang" untuk melihat data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -453,14 +464,17 @@
 
         function processFetchedFaces(usersData) {
             registeredFaces = [];
+            const kelasSet = new Set();
 
             usersData.forEach(user => {
                 try {
                     const descArray = JSON.parse(user.descriptorStr);
                     const descriptor = new Float32Array(descArray);
+                    const kelas = user.kelas || '';
+                    if (kelas) kelasSet.add(kelas);
 
                     registeredFaces.push(
-                        new faceapi.LabeledFaceDescriptors(user.name + "|" + user.id, [descriptor])
+                        new faceapi.LabeledFaceDescriptors(user.name + "|" + user.id + "|" + kelas, [descriptor])
                     );
                 } catch (e) {
                     console.error("Format wajah korup untuk:", user.name);
@@ -472,9 +486,26 @@
             } else {
                 faceMatcher = null;
             }
+
+            updateKelasOptions(kelasSet);
         }
 
-        function saveFaceToDB(id, name, descriptorArray) {
+        // Mengisi datalist saran kelas (form registrasi) & dropdown filter (tab Rekap)
+        // berdasarkan daftar kelas yang sudah pernah didaftarkan.
+        function updateKelasOptions(kelasSet) {
+            const kelasList = Array.from(kelasSet).sort();
+
+            const datalist = document.getElementById('kelas-datalist');
+            datalist.innerHTML = kelasList.map(k => `<option value="${k}"></option>`).join('');
+
+            const filterSelect = document.getElementById('rekap-kelas-filter');
+            const currentVal = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">Semua Kelas</option>' +
+                kelasList.map(k => `<option value="${k}">${k}</option>`).join('');
+            if (kelasList.includes(currentVal)) filterSelect.value = currentVal;
+        }
+
+        function saveFaceToDB(id, name, kelas, descriptorArray) {
             const descriptorJson = JSON.stringify(Array.from(descriptorArray));
 
             const guruUsername = sessionStorage.getItem('guru_username');
@@ -488,7 +519,7 @@
 
             showLoadingModal("Menyimpan ke Database...");
 
-            callGAS('saveUser', { id: id, name: name, descriptorJsonStr: descriptorJson, guruUsername: guruUsername, guruPassword: guruPassword })
+            callGAS('saveUser', { id: id, name: name, kelas: kelas, descriptorJsonStr: descriptorJson, guruUsername: guruUsername, guruPassword: guruPassword })
                 .then((res) => {
                     hideLoadingModal();
                     if (res.success) {
@@ -631,11 +662,11 @@
             showEnrollGate();
         }
 
-        function saveAttendanceLogToDB(id, name, accuracy) {
+        function saveAttendanceLogToDB(id, name, accuracy, kelas) {
             showLoadingModal("Mencatat...");
             btnAbsen.disabled = true;
 
-            callGAS('recordAttendance', { id: id, name: name, accuracy: accuracy })
+            callGAS('recordAttendance', { id: id, name: name, accuracy: accuracy, kelas: kelas || '' })
                 .then((res) => {
                     hideLoadingModal();
 
@@ -759,6 +790,7 @@
                             const split = result.label.split('|');
                             const name = split[0];
                             const id = split[1];
+                            const kelas = split[2] || '';
                             const accuracy = Math.round((1 - result.distance) * 100);
 
                             attName.innerText = name;
@@ -774,6 +806,7 @@
 
                             btnAbsen.dataset.userId = id;
                             btnAbsen.dataset.userName = name;
+                            btnAbsen.dataset.userKelas = kelas;
                             btnAbsen.dataset.accuracy = accuracy;
 
                             // === ABSEN OTOMATIS ===
@@ -786,7 +819,7 @@
                                 isAutoSaving = true;
                                 lastAutoId = id;
                                 lastAutoTime = now;
-                                saveAttendanceLogToDB(id, name, accuracy);
+                                saveAttendanceLogToDB(id, name, accuracy, kelas);
                             }
                         } else {
                             attName.innerText = "Tidak Dikenali";
@@ -803,8 +836,9 @@
             const id = btnAbsen.dataset.userId;
             const name = btnAbsen.dataset.userName;
             const acc = btnAbsen.dataset.accuracy;
+            const kelas = btnAbsen.dataset.userKelas;
             if(id && name) {
-                saveAttendanceLogToDB(id, name, acc);
+                saveAttendanceLogToDB(id, name, acc, kelas);
             }
         });
 
@@ -866,26 +900,30 @@
 
         document.getElementById('enroll-id').addEventListener('input', checkEnrollForm);
         document.getElementById('enroll-name').addEventListener('input', checkEnrollForm);
+        document.getElementById('enroll-kelas').addEventListener('input', checkEnrollForm);
 
         function checkEnrollForm() {
             const id = document.getElementById('enroll-id').value.trim();
             const name = document.getElementById('enroll-name').value.trim();
-            btnEnrollSave.disabled = !(id !== '' && name !== '' && tempFaceDescriptor !== null);
+            const kelas = document.getElementById('enroll-kelas').value.trim();
+            btnEnrollSave.disabled = !(id !== '' && name !== '' && kelas !== '' && tempFaceDescriptor !== null);
         }
 
         btnEnrollSave.addEventListener('click', () => {
             const id = document.getElementById('enroll-id').value.trim();
             const name = document.getElementById('enroll-name').value.trim();
+            const kelas = document.getElementById('enroll-kelas').value.trim();
 
-            if(id && name && tempFaceDescriptor) {
+            if(id && name && kelas && tempFaceDescriptor) {
                 stopCamera();
-                saveFaceToDB(id, name, tempFaceDescriptor);
+                saveFaceToDB(id, name, kelas, tempFaceDescriptor);
             }
         });
 
         function resetEnrollForm() {
             document.getElementById('enroll-id').value = '';
             document.getElementById('enroll-name').value = '';
+            document.getElementById('enroll-kelas').value = '';
             tempFaceDescriptor = null;
             btnEnrollSave.disabled = true;
 
@@ -901,16 +939,17 @@
 
         function fetchLogs() {
             const tbody = document.getElementById('log-table-body');
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center"><div class="loader-spinner border-[var(--accent)] border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
+            const kelas = document.getElementById('rekap-kelas-filter').value;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center"><div class="loader-spinner border-[var(--accent)] border-t-transparent w-6 h-6 mr-2"></div> Memuat data...</td></tr>`;
 
-            callGAS('getAttendanceLogs').then((res) => {
+            callGAS('getAttendanceLogs', { kelas: kelas }).then((res) => {
                 if (res.success) {
                     renderTableLogs(res.data);
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">Gagal memuat data.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Gagal memuat data.</td></tr>`;
                 }
             }).catch(() => {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Gagal terhubung ke server.</td></tr>`;
             });
         }
 
@@ -919,7 +958,7 @@
             tbody.innerHTML = '';
 
             if(!logs || logs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">Belum ada data absensi.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">Belum ada data absensi.</td></tr>`;
                 return;
             }
 
@@ -933,6 +972,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.waktu}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${log.id}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.nama}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${log.kelas || '-'}</td>
                     <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${badgeClass}">${log.tipe}</span></td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${log.keterangan || '-'}</td>
                 `;

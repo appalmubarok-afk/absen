@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -102,9 +103,202 @@
             }
             .tabbar-btn.active { background: var(--accent); color: #fff; }
         }
+
+        /* =====================================================
+           HALAMAN LOGIN (BARU) - tema hijau-teal & emas
+           ===================================================== */
+        :root { --lp-deep:#0b3f4a; --lp-mid:#0e5a5c; --lp-green:#157a6c; --lp-gold:#E8A93A; --lp-gold-soft:#f6d68f; --lp-navy:#1f2a6b; }
+        #login-page {
+            position: fixed; inset: 0; z-index: 60; overflow-y: auto; overflow-x: hidden;
+            display: flex; flex-direction: column; background: #fff;
+            transition: opacity .45s ease, transform .45s ease;
+        }
+        #login-page.leaving { opacity: 0; transform: scale(1.015); pointer-events: none; }
+        .lp-nav { background:#fff; border-bottom:1px solid rgba(0,0,0,.05); flex-shrink:0; }
+        .lp-nav-inner { max-width:72rem; margin:0 auto; padding:.8rem 1.1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+        .lp-brand { display:flex; align-items:center; gap:.7rem; }
+        .lp-brand-logo { width:2.6rem; height:2.6rem; border-radius:.85rem; background:linear-gradient(135deg,var(--lp-green),var(--lp-deep)); color:var(--lp-gold-soft); display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 6px 14px rgba(14,90,92,.28); }
+        .lp-brand-text { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; line-height:1.1; color:var(--lp-deep); font-size:1rem; }
+        .lp-brand-text small { display:block; font-weight:600; font-size:.68rem; color:#6B7570; letter-spacing:.02em; margin-top:2px; }
+        .lp-visit { background:var(--lp-navy); color:#fff; font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:.85rem; padding:.65rem 1.1rem; border-radius:.9rem; display:inline-flex; align-items:center; gap:.5rem; white-space:nowrap; transition:transform .2s, box-shadow .2s; text-decoration:none; }
+        .lp-visit:hover { transform:translateY(-1px); box-shadow:0 8px 18px rgba(31,42,107,.3); }
+
+        .lp-hero {
+            position:relative; flex:1; overflow:hidden; color:#fff;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(232,169,58,.12), transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(255,255,255,.07), transparent 45%),
+                linear-gradient(135deg, var(--lp-deep) 0%, var(--lp-mid) 55%, var(--lp-green) 100%);
+            display:flex; align-items:center;
+        }
+        .lp-pattern { position:absolute; inset:0; opacity:.16; pointer-events:none;
+            background-image:
+                linear-gradient(45deg, transparent 47%, var(--lp-gold) 47%, var(--lp-gold) 50%, transparent 50%),
+                linear-gradient(-45deg, transparent 47%, var(--lp-gold) 47%, var(--lp-gold) 50%, transparent 50%);
+            background-size: 64px 64px; mask-image: radial-gradient(circle at 80% 40%, #000 0%, transparent 62%); -webkit-mask-image: radial-gradient(circle at 80% 40%, #000 0%, transparent 62%);
+        }
+        .lp-ring { position:absolute; border:2px solid rgba(232,169,58,.28); border-radius:50%; pointer-events:none; }
+        .lp-star { position:absolute; color:var(--lp-gold-soft); opacity:.8; animation: lpTwinkle 3.2s ease-in-out infinite; pointer-events:none; user-select:none; }
+        @keyframes lpTwinkle { 0%,100%{opacity:.25; transform:scale(.8);} 50%{opacity:1; transform:scale(1.15);} }
+        .lp-lantern { position:absolute; top:0; pointer-events:none; transform-origin: top center; animation: lpSwing 5s ease-in-out infinite; }
+        @keyframes lpSwing { 0%,100%{transform:rotate(-3deg);} 50%{transform:rotate(3deg);} }
+        .lp-mosque { position:absolute; left:0; right:0; bottom:0; width:100%; height:auto; opacity:.14; pointer-events:none; }
+
+        .lp-wrap { position:relative; z-index:2; width:100%; max-width:72rem; margin:0 auto; padding:2.5rem 1.25rem 4.5rem; display:grid; gap:2.5rem; align-items:center; grid-template-columns:1fr; }
+        @media (min-width: 960px) { .lp-wrap { grid-template-columns: 1.1fr .9fr; padding:3rem 1.5rem 5rem; gap:3rem; } }
+
+        .lp-bismillah { font-family:'Amiri',serif; font-size:2rem; color:var(--lp-gold); line-height:1.5; margin-bottom:.4rem; text-shadow:0 2px 12px rgba(0,0,0,.25); }
+        .lp-pill { display:inline-block; background:rgba(255,255,255,.1); border:1px solid rgba(232,169,58,.35); color:var(--lp-gold); font-family:'Plus Jakarta Sans',sans-serif; font-weight:700; font-size:.8rem; padding:.5rem 1rem; border-radius:999px; }
+        .lp-title { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:clamp(2rem, 5.2vw, 3.6rem); line-height:1.08; margin:1rem 0 .8rem; letter-spacing:-.02em; }
+        .lp-title span { color:var(--lp-gold); }
+        .lp-sub { color:rgba(255,255,255,.82); font-size:1.02rem; line-height:1.6; max-width:30rem; }
+        .lp-feats { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1.4rem; }
+        .lp-feat { display:inline-flex; align-items:center; gap:.5rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); padding:.5rem .85rem; border-radius:.8rem; font-size:.8rem; font-weight:600; backdrop-filter:blur(4px); }
+        .lp-feat i { color:var(--lp-gold); }
+
+        .lp-card-wrap { position:relative; max-width:26rem; width:100%; margin:0 auto; padding:1.2rem; }
+        .lp-card-wrap::before { content:''; position:absolute; inset:0; border:3px solid var(--lp-gold); border-radius:2.2rem 2.2rem 1.4rem 1.4rem; border-top-left-radius:11rem; border-top-right-radius:11rem; opacity:.75; pointer-events:none; }
+        .lp-card { position:relative; background:#fff; color:var(--ink); border-radius:1.8rem 1.8rem 1.2rem 1.2rem; border-top-left-radius:10rem; border-top-right-radius:10rem; padding:3.2rem 1.6rem 1.7rem; box-shadow:0 25px 60px rgba(0,0,0,.35); }
+        @media (max-width:420px){ .lp-card { padding:3rem 1.2rem 1.5rem; } }
+        .lp-card-icon { position:absolute; top:-1.9rem; left:50%; transform:translateX(-50%); width:3.8rem; height:3.8rem; border-radius:50%; background:linear-gradient(135deg,var(--lp-gold),#d18a14); color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:4px solid #fff; box-shadow:0 8px 20px rgba(232,169,58,.5); }
+        .lp-card h2 { font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.35rem; text-align:center; color:var(--lp-deep); }
+        .lp-card .lp-card-sub { text-align:center; color:var(--ink-soft); font-size:.85rem; margin:.3rem 0 1.3rem; }
+        .lp-label { display:block; font-size:.8rem; font-weight:700; margin-bottom:.4rem; color:var(--ink); }
+        .lp-field { position:relative; margin-bottom:1rem; }
+        .lp-field > i.lp-ico { position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:#9aa5a0; font-size:.9rem; pointer-events:none; transition:color .2s; }
+        .lp-input { width:100%; padding:.85rem 2.8rem .85rem 2.6rem; border-radius:1rem; border:1.5px solid var(--line); background:var(--bg); outline:none; font-size:.95rem; transition:border-color .2s, box-shadow .2s, background .2s; }
+        .lp-input:focus { border-color:var(--lp-green); background:#fff; box-shadow:0 0 0 4px rgba(21,122,108,.14); }
+        .lp-field:focus-within > i.lp-ico { color:var(--lp-green); }
+        .lp-eye { position:absolute; right:.4rem; top:50%; transform:translateY(-50%); width:2.2rem; height:2.2rem; border-radius:.7rem; color:#8a948f; display:flex; align-items:center; justify-content:center; background:transparent; border:0; cursor:pointer; }
+        .lp-eye:hover { color:var(--lp-green); background:rgba(21,122,108,.08); }
+        .lp-error { display:none; align-items:flex-start; gap:.5rem; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:.82rem; font-weight:600; padding:.65rem .85rem; border-radius:.85rem; margin-bottom:1rem; }
+        .lp-error.show { display:flex; }
+        .lp-shake { animation: lpShake .45s ease; }
+        @keyframes lpShake { 10%,90%{transform:translateX(-2px);} 20%,80%{transform:translateX(4px);} 30%,50%,70%{transform:translateX(-6px);} 40%,60%{transform:translateX(6px);} }
+        .lp-btn { width:100%; background:linear-gradient(135deg,var(--lp-gold),#d99220); color:var(--lp-deep); font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1rem; padding:.95rem 1rem; border-radius:1rem; border:0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.6rem; box-shadow:0 10px 22px rgba(232,169,58,.4); transition:transform .15s, box-shadow .2s, opacity .2s; }
+        .lp-btn:hover { transform:translateY(-1px); box-shadow:0 14px 28px rgba(232,169,58,.5); }
+        .lp-btn:active { transform:translateY(0); }
+        .lp-btn:disabled { opacity:.7; cursor:wait; transform:none; }
+        .lp-note { text-align:center; color:var(--ink-soft); font-size:.74rem; margin-top:1rem; line-height:1.5; }
+        .lp-note i { color:var(--lp-green); margin-right:.25rem; }
+        .lp-footer { position:absolute; z-index:3; left:0; right:0; bottom:.8rem; text-align:center; font-size:.72rem; color:rgba(255,255,255,.6); }
+
+        /* Info akun di header aplikasi (setelah login) */
+        .hdr-user { display:none; align-items:center; gap:.75rem; }
+        .hdr-user .who { text-align:right; line-height:1.15; }
+        .hdr-user .who small { display:block; font-size:.68rem; color:var(--ink-soft); }
+        .hdr-user .who b { font-family:'Plus Jakarta Sans',sans-serif; font-size:.82rem; }
+        .hdr-logout { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-weight:700; font-size:.75rem; padding:.5rem .8rem; border-radius:.8rem; cursor:pointer; white-space:nowrap; transition:background .2s; }
+        .hdr-logout:hover { background:#fee2e2; }
+        @media (max-width:480px){ .hdr-user .who small { display:none; } }
     </style>
 </head>
 <body class="h-full flex flex-col">
+
+    <!-- =====================================================
+         HALAMAN LOGIN (BARU) - tampil sebelum masuk aplikasi
+         ===================================================== -->
+    <div id="login-page">
+        <div class="lp-nav">
+            <div class="lp-nav-inner">
+                <div class="lp-brand">
+                    <div class="lp-brand-logo"><i class="fa-solid fa-fingerprint"></i></div>
+                    <div class="lp-brand-text">SMP IT Al Mubarok<small>Sistem Absensi Wajah</small></div>
+                </div>
+                <a href="https://smpitalmubarok.sch.id" target="_blank" rel="noopener" class="lp-visit"><i class="fa-solid fa-globe"></i><span>Kunjungi Website</span></a>
+            </div>
+        </div>
+
+        <div class="lp-hero">
+            <div class="lp-pattern"></div>
+            <div class="lp-ring" style="width:520px;height:520px;right:-140px;top:-120px;"></div>
+            <div class="lp-ring" style="width:320px;height:320px;right:-40px;top:-20px;"></div>
+            <div class="lp-ring" style="width:380px;height:380px;left:-160px;bottom:-140px;"></div>
+
+            <span class="lp-star" style="left:9%;top:18%;font-size:14px;animation-delay:.2s">✦</span>
+            <span class="lp-star" style="left:46%;top:10%;font-size:10px;animation-delay:1.1s">✦</span>
+            <span class="lp-star" style="left:62%;top:26%;font-size:16px;animation-delay:.6s">✦</span>
+            <span class="lp-star" style="left:30%;top:72%;font-size:12px;animation-delay:1.8s">✦</span>
+            <span class="lp-star" style="left:92%;top:60%;font-size:12px;animation-delay:.9s">✦</span>
+            <span class="lp-star" style="left:5%;top:55%;font-size:9px;animation-delay:2.2s">✦</span>
+
+            <!-- Lentera kiri & kanan -->
+            <svg class="lp-lantern" style="left:2.5%;" width="44" height="120" viewBox="0 0 44 120" aria-hidden="true">
+                <line x1="22" y1="0" x2="22" y2="38" stroke="#E8A93A" stroke-width="2"/>
+                <rect x="14" y="36" width="16" height="6" rx="2" fill="#E8A93A"/>
+                <path d="M10 48 Q22 40 34 48 L36 88 Q22 96 8 88 Z" fill="#f6d68f" stroke="#E8A93A" stroke-width="2.5"/>
+                <path d="M16 50 L15 88 M22 46 L22 92 M28 50 L29 88" stroke="#E8A93A" stroke-width="1.6" opacity=".7"/>
+                <rect x="12" y="90" width="20" height="6" rx="2" fill="#E8A93A"/>
+                <path d="M18 96 L22 110 L26 96" fill="#E8A93A"/>
+            </svg>
+            <svg class="lp-lantern hidden md:block" style="right:3%;animation-delay:1.4s;" width="44" height="150" viewBox="0 0 44 150" aria-hidden="true">
+                <line x1="22" y1="0" x2="22" y2="68" stroke="#E8A93A" stroke-width="2"/>
+                <rect x="14" y="66" width="16" height="6" rx="2" fill="#E8A93A"/>
+                <path d="M10 78 Q22 70 34 78 L36 118 Q22 126 8 118 Z" fill="#f6d68f" stroke="#E8A93A" stroke-width="2.5"/>
+                <path d="M16 80 L15 118 M22 76 L22 122 M28 80 L29 118" stroke="#E8A93A" stroke-width="1.6" opacity=".7"/>
+                <rect x="12" y="120" width="20" height="6" rx="2" fill="#E8A93A"/>
+                <path d="M18 126 L22 140 L26 126" fill="#E8A93A"/>
+            </svg>
+
+            <!-- Siluet masjid -->
+            <svg class="lp-mosque" viewBox="0 0 1200 160" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+                <path fill="#fff" d="M0 160 V120 H80 V90 Q100 60 120 90 V120 H220 V70 L228 40 L236 70 V120 H330 Q380 30 430 120 H520 V80 L530 30 L540 80 V120 H640 Q700 20 760 120 H860 V70 L868 38 L876 70 V120 H980 Q1030 50 1080 120 H1140 V100 Q1160 80 1180 100 V160 Z"/>
+            </svg>
+
+            <div class="lp-wrap">
+                <div>
+                    <div class="lp-bismillah">بِسْمِ ٱللّٰهِ ٱلرَّحْمٰنِ ٱلرَّحِيمِ</div>
+                    <span class="lp-pill">Absensi — SMP Islam Terpadu Al Mubarok</span>
+                    <h1 class="lp-title">Sistem Absensi<br><span>Pengenalan Wajah</span></h1>
+                    <p class="lp-sub">Presensi siswa jadi cepat, tertib, dan tercatat otomatis. Silakan masuk dengan akun guru untuk memulai.</p>
+                    <div class="lp-feats">
+                        <span class="lp-feat"><i class="fa-solid fa-camera-retro"></i> Scan wajah otomatis</span>
+                        <span class="lp-feat"><i class="fa-solid fa-clock"></i> Masuk, telat &amp; pulang</span>
+                        <span class="lp-feat"><i class="fa-solid fa-table-list"></i> Rekap real-time</span>
+                    </div>
+                </div>
+
+                <div class="lp-card-wrap">
+                    <div class="lp-card" id="lp-card">
+                        <div class="lp-card-icon"><i class="fa-solid fa-lock"></i></div>
+                        <h2>Masuk Aplikasi</h2>
+                        <p class="lp-card-sub">Login dengan akun guru yang terdaftar</p>
+
+                        <div class="lp-field">
+                            <label class="lp-label" for="lp-username">Username</label>
+                            <div style="position:relative;">
+                                <i class="fa-solid fa-user lp-ico"></i>
+                                <input type="text" id="lp-username" class="lp-input" placeholder="Username guru" autocomplete="username" autocapitalize="none" spellcheck="false">
+                            </div>
+                        </div>
+                        <div class="lp-field">
+                            <label class="lp-label" for="lp-password">Password</label>
+                            <div style="position:relative;">
+                                <i class="fa-solid fa-key lp-ico"></i>
+                                <input type="password" id="lp-password" class="lp-input" placeholder="Password" autocomplete="current-password">
+                                <button type="button" class="lp-eye" id="lp-eye" aria-label="Tampilkan password"><i class="fa-solid fa-eye"></i></button>
+                            </div>
+                        </div>
+
+                        <div id="lp-error" class="lp-error"><i class="fa-solid fa-circle-exclamation" style="margin-top:2px"></i><span id="lp-error-text"></span></div>
+
+                        <button type="button" id="lp-btn" class="lp-btn"><i class="fa-solid fa-right-to-bracket"></i><span>Masuk</span></button>
+                        <p class="lp-note"><i class="fa-solid fa-shield-halved"></i>Lupa password? Hubungi admin sekolah.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="lp-footer">© SMP Islam Terpadu Al Mubarok — Sistem Absensi Wajah</div>
+        </div>
+    </div>
+    <script>
+        // Kalau sesi guru masih aktif (tab belum ditutup), langsung lewati halaman login (tanpa kedip)
+        if (sessionStorage.getItem('guru_username') && sessionStorage.getItem('guru_password')) {
+            document.getElementById('login-page').style.display = 'none';
+        } else {
+            document.documentElement.style.overflow = 'hidden';
+        }
+    </script>
+
 
     <header class="bg-[var(--surface)] border-b border-[var(--line)]">
         <div class="max-w-5xl mx-auto px-4 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between">
@@ -113,6 +307,10 @@
                     <i class="fa-solid fa-fingerprint text-sm"></i>
                 </div>
                 <span class="display-font font-bold text-[14px] sm:text-base leading-tight">Absen SMP IT<br class="sm:hidden"> Al Mubarok</span>
+            </div>
+            <div id="hdr-user" class="hdr-user">
+                <div class="who"><small>Masuk sebagai</small><b id="hdr-user-name">-</b></div>
+                <button type="button" class="hdr-logout" onclick="logoutGuru()"><i class="fa-solid fa-right-from-bracket mr-1"></i>Keluar</button>
             </div>
         </div>
     </header>
@@ -1108,6 +1306,105 @@
             }, 300);
         }
 
+    </script>
+
+    <script>
+    // =========================================================
+    //  GERBANG LOGIN (BARU) — memakai backend loginGuru yang SUDAH ADA
+    //  dan kunci sessionStorage yang sama dengan kode lama
+    //  (guru_username, guru_password, guru_nama), jadi tab Registrasi
+    //  otomatis ikut "sudah login".
+    // =========================================================
+    (function () {
+        const page = document.getElementById('login-page');
+        const card = document.getElementById('lp-card');
+        const inUser = document.getElementById('lp-username');
+        const inPass = document.getElementById('lp-password');
+        const btn = document.getElementById('lp-btn');
+        const errBox = document.getElementById('lp-error');
+        const errTxt = document.getElementById('lp-error-text');
+        const eye = document.getElementById('lp-eye');
+        const hdrUser = document.getElementById('hdr-user');
+        const hdrName = document.getElementById('hdr-user-name');
+        const BTN_HTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Masuk</span>';
+
+        function showHeaderUser() {
+            const nama = sessionStorage.getItem('guru_nama');
+            if (nama) { hdrName.innerText = nama; hdrUser.style.display = 'flex'; }
+            else { hdrUser.style.display = 'none'; }
+        }
+
+        function showError(msg) {
+            errTxt.innerText = msg;
+            errBox.classList.add('show');
+            card.classList.remove('lp-shake'); void card.offsetWidth; card.classList.add('lp-shake');
+        }
+
+        function openLoginPage() {
+            page.style.display = 'flex';
+            page.classList.remove('leaving');
+            document.documentElement.style.overflow = 'hidden';
+            inUser.value = ''; inPass.value = '';
+            errBox.classList.remove('show');
+            showHeaderUser();
+            setTimeout(() => inUser.focus(), 50);
+        }
+
+        function closeLoginPage() {
+            page.classList.add('leaving');
+            document.documentElement.style.overflow = '';
+            setTimeout(() => { page.style.display = 'none'; }, 450);
+            showHeaderUser();
+        }
+
+        function doLogin() {
+            const username = inUser.value.trim();
+            const password = inPass.value;
+            errBox.classList.remove('show');
+            if (!username || !password) { showError('Username dan password wajib diisi.'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader-spinner" style="border-color:rgba(11,63,74,.3);border-top-color:#0b3f4a"></div><span>Memeriksa...</span>';
+
+            callGAS('loginGuru', { username: username, password: password }, 15000)
+                .then((res) => {
+                    btn.disabled = false; btn.innerHTML = BTN_HTML;
+                    if (res && res.success) {
+                        sessionStorage.setItem('guru_username', username);
+                        sessionStorage.setItem('guru_password', password);
+                        sessionStorage.setItem('guru_nama', res.nama || username);
+                        inPass.value = '';
+                        closeLoginPage();
+                        if (typeof showEnrollGate === 'function') showEnrollGate();
+                    } else {
+                        showError((res && res.message) || 'Login gagal.');
+                    }
+                })
+                .catch((err) => {
+                    btn.disabled = false; btn.innerHTML = BTN_HTML;
+                    showError(err && err.message === 'TIMEOUT' ? 'Server terlalu lama merespons. Coba lagi.' : 'Gagal terhubung ke server. Periksa koneksi internet.');
+                });
+        }
+
+        btn.addEventListener('click', doLogin);
+        [inUser, inPass].forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); }));
+        eye.addEventListener('click', () => {
+            const show = inPass.type === 'password';
+            inPass.type = show ? 'text' : 'password';
+            eye.innerHTML = '<i class="fa-solid ' + (show ? 'fa-eye-slash' : 'fa-eye') + '"></i>';
+        });
+
+        // Bungkus logoutGuru() lama: setelah logout, kembali ke halaman login.
+        const _logoutAsli = window.logoutGuru;
+        window.logoutGuru = function () {
+            try { _logoutAsli(); } catch (e) {}
+            if (typeof switchTab === 'function') switchTab('attendance');
+            openLoginPage();
+        };
+
+        showHeaderUser();
+        if (page.style.display !== 'none') setTimeout(() => inUser.focus(), 100);
+    })();
     </script>
 </body>
 </html>

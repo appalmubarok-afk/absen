@@ -768,10 +768,16 @@
 
         // Kontrol Absen Otomatis
         const AUTO_THRESHOLD = 50;       // ambang akurasi minimal untuk auto-simpan (%) -- selaras dengan FaceMatcher 0.55 (wajah dikenali mulai ~45%)
-        const AUTO_COOLDOWN_MS = 5000;   // jeda sebelum ID yang sama bisa absen otomatis lagi
+        const AUTO_COOLDOWN_MS = 30000;  // jeda minimal sebelum ID yang sama bisa tercatat lagi (walau wajah sempat keluar kamera)
+        const CONFIRM_FRAMES = 3;        // wajah harus dikenali sebagai ID yang SAMA sekian frame berturut-turut sebelum disimpan
+        const LEAVE_MS = 3000;           // wajah dianggap sudah pergi kalau tidak terlihat selama sekian ms -> kunci dibuka
         let isAutoSaving = false;
         let lastAutoId = null;
         let lastAutoTime = 0;
+        let lockedId = null;             // ID yang sudah dicatat & masih berdiri di depan kamera (tidak dicatat ulang)
+        let lastSeenLockedTime = 0;      // terakhir kali wajah ber-ID terkunci terlihat
+        let confirmId = null;            // kandidat ID yang sedang dikonfirmasi
+        let confirmCount = 0;
 
         // Referensi Elemen UI Tab Absensi
         const videoAtt = document.getElementById('video-attendance');
@@ -1113,6 +1119,7 @@
                         showModal("Respons Lama", "Server lama merespons. Absen kemungkinan SUDAH tercatat -- cek tab Rekap untuk memastikan.", "info");
                     } else {
                         showModal("Error", "Gagal mencatat kehadiran. Periksa koneksi Anda.", "error");
+                        lockedId = null; lastAutoTime = 0; // gagal kirim -> izinkan dicoba lagi
                     }
                     btnAbsen.disabled = false;
                 })
@@ -1149,6 +1156,7 @@
                 clearInterval(scanInterval);
                 scanInterval = null;
             }
+            lockedId = null; confirmId = null; confirmCount = 0;
         }
 
         // =========================================================
@@ -1300,7 +1308,10 @@
                     if (!detection) {
                         // Anti-berkedip: baru reset tampilan kalau gagal beberapa frame berturut-turut
                         missAtt++;
+                        confirmId = null; confirmCount = 0;
                         if (missAtt >= MISS_TOLERANCE) resetAttendanceUI();
+                        // Buka kunci hanya kalau wajah benar-benar sudah pergi (bukan sekadar 1-2 frame meleset)
+                        if (lockedId && (Date.now() - lastSeenLockedTime) > LEAVE_MS) lockedId = null;
                         return;
                     }
                     missAtt = 0;
@@ -1327,7 +1338,7 @@
                             document.getElementById('avatar-circle').querySelector('i').classList.remove('text-gray-300');
                             document.getElementById('avatar-circle').querySelector('i').classList.add('text-green-500');
 
-                            btnAbsen.disabled = false;
+                            btnAbsen.disabled = (id === lockedId); // sudah tercatat -> tombol manual ikut nonaktif
 
                             btnAbsen.dataset.userId = id;
                             btnAbsen.dataset.userName = name;
@@ -1338,17 +1349,32 @@
                             // Simpan sendiri kalau akurasi >= AUTO_THRESHOLD, tidak sedang
                             // menyimpan proses lain, dan ID ini belum absen dalam masa cooldown.
                             const now = Date.now();
-                            const sudahCooldown = !(id === lastAutoId && (now - lastAutoTime) < AUTO_COOLDOWN_MS);
 
-                            if (accuracy >= AUTO_THRESHOLD && !isAutoSaving && sudahCooldown) {
-                                isAutoSaving = true;
-                                lastAutoId = id;
-                                lastAutoTime = now;
-                                saveAttendanceLogToDB(id, name, accuracy, kelas);
+                            if (id === lockedId) {
+                                // Wajah yang sama masih di depan kamera: sudah dicatat, jangan dicatat lagi.
+                                lastSeenLockedTime = now;
+                                confirmId = null; confirmCount = 0;
+                            } else if (accuracy >= AUTO_THRESHOLD) {
+                                // Konfirmasi: ID harus sama selama CONFIRM_FRAMES frame berturut-turut
+                                if (confirmId === id) confirmCount++; else { confirmId = id; confirmCount = 1; }
+
+                                const sudahCooldown = !(id === lastAutoId && (now - lastAutoTime) < AUTO_COOLDOWN_MS);
+                                if (confirmCount >= CONFIRM_FRAMES && !isAutoSaving && sudahCooldown) {
+                                    isAutoSaving = true;
+                                    lastAutoId = id;
+                                    lastAutoTime = now;
+                                    lockedId = id;
+                                    lastSeenLockedTime = now;
+                                    confirmId = null; confirmCount = 0;
+                                    saveAttendanceLogToDB(id, name, accuracy, kelas);
+                                }
+                            } else {
+                                confirmId = null; confirmCount = 0;
                             }
                         } else {
                             attName.innerText = "Tidak Dikenali";
                             attConfidence.innerText = "-";
+                            confirmId = null; confirmCount = 0;
                             btnAbsen.disabled = true;
                             document.getElementById('face-guide-att').classList.remove('locked');
                         }

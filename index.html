@@ -769,11 +769,13 @@
         // Kontrol Absen Otomatis
         const AUTO_THRESHOLD = 50;       // ambang akurasi minimal untuk auto-simpan (%) -- selaras dengan FaceMatcher 0.55 (wajah dikenali mulai ~45%)
         const AUTO_COOLDOWN_MS = 30000;  // jeda minimal sebelum ID yang sama bisa tercatat lagi (walau wajah sempat keluar kamera)
-        const CONFIRM_FRAMES = 3;        // wajah harus dikenali sebagai ID yang SAMA sekian frame berturut-turut sebelum disimpan
+        const CONFIRM_FRAMES = 2;        // wajah harus dikenali sebagai ID yang SAMA sekian frame berturut-turut sebelum disimpan
         const LEAVE_MS = 3000;           // wajah dianggap sudah pergi kalau tidak terlihat selama sekian ms -> kunci dibuka
         let isAutoSaving = false;
         let lastAutoId = null;
         let lastAutoTime = 0;
+        const LOCKED_RECHECK_MS = 1000;  // saat wajah sudah tercatat, pengenalan penuh hanya diulang tiap sekian ms (hemat CPU/GPU)
+        let scanToken = 0;               // penanda loop scan aktif; naik tiap scanner dimulai/dihentikan
         let lockedId = null;             // ID yang sudah dicatat & masih berdiri di depan kamera (tidak dicatat ulang)
         let lastSeenLockedTime = 0;      // terakhir kali wajah ber-ID terkunci terlihat
         let confirmId = null;            // kandidat ID yang sedang dikonfirmasi
@@ -1156,6 +1158,7 @@
                 clearInterval(scanInterval);
                 scanInterval = null;
             }
+            scanToken++;
             lockedId = null; confirmId = null; confirmCount = 0;
         }
 
@@ -1281,31 +1284,24 @@
                 const displaySize = { width: videoAtt.videoWidth, height: videoAtt.videoHeight };
                 fitCanvasToVideo(canvasAtt);
 
-                let isBusyAtt = false;
+                const myToken = ++scanToken;
+                const tinyOpts = new faceapi.TinyFaceDetectorOptions(DETECT_ATT);
                 let missAtt = 0;
-                scanInterval = setInterval(async () => {
+                let lastFullTime = 0;
+
+                const tick = async () => {
                     if (videoAtt.paused || videoAtt.ended) return;
-                    if (isBusyAtt) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
-                    isBusyAtt = true;
 
-                    // detectSingleFace lebih cepat daripada detectAllFaces (hanya 1 wajah utama).
-                    // Opsi deteksi diatur di DETECT_ATT. try/catch memastikan satu error AI
-                    // tidak membuat proses macet permanen (isBusyAtt tidak tersangkut).
-                    let detection = null;
-                    try {
-                        detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions(DETECT_ATT))
-                                                 .withFaceLandmarks()
-                                                 .withFaceDescriptor();
-                    } catch (e) { console.error(e); }
-
-                    isBusyAtt = false;
-
-                    if (!currentStream) return; // scanner dimatikan saat AI masih memproses frame
+                    // TAHAP 1 (ringan): cari kotak wajah saja. Kalau tidak ada wajah, model berat
+                    // (landmark + pengenal wajah) tidak dijalankan sama sekali -> jauh lebih cepat.
+                    let quick = null;
+                    try { quick = await faceapi.detectSingleFace(videoAtt, tinyOpts); } catch (e) { console.error(e); }
+                    if (myToken !== scanToken || !currentStream) return; // scanner dimatikan saat AI masih memproses
 
                     fitCanvasToVideo(canvasAtt);
                     canvasAtt.getContext('2d').clearRect(0, 0, canvasAtt.width, canvasAtt.height);
 
-                    if (!detection) {
+                    if (!quick) {
                         // Anti-berkedip: baru reset tampilan kalau gagal beberapa frame berturut-turut
                         missAtt++;
                         confirmId = null; confirmCount = 0;
@@ -1316,11 +1312,28 @@
                     }
                     missAtt = 0;
 
-                    const resizedDetection = faceapi.resizeResults(detection, displaySize);
-                    drawFaceBox(canvasAtt, videoAtt, resizedDetection.detection.box, '#34d399');
+                    // Kotak wajah langsung digambar (tidak menunggu proses pengenalan selesai)
+                    drawFaceBox(canvasAtt, videoAtt, quick.box, '#34d399');
+
+                    // Wajah yang sudah tercatat: cukup cek keberadaannya, pengenalan penuh hanya tiap 1 detik.
+                    const t0 = Date.now();
+                    if (lockedId && (t0 - lastFullTime) < LOCKED_RECHECK_MS) {
+                        lastSeenLockedTime = t0;
+                        return;
+                    }
+
+                    // TAHAP 2 (berat): landmark + descriptor untuk mengenali siapa wajahnya.
+                    let detection = null;
+                    try {
+                        detection = await faceapi.detectSingleFace(videoAtt, tinyOpts)
+                                                 .withFaceLandmarks()
+                                                 .withFaceDescriptor();
+                    } catch (e) { console.error(e); }
+                    lastFullTime = Date.now();
+                    if (myToken !== scanToken || !currentStream || !detection) return;
 
                     if (faceMatcher) {
-                        const result = faceMatcher.findBestMatch(resizedDetection.descriptor);
+                        const result = faceMatcher.findBestMatch(detection.descriptor);
 
                         if (result.label !== 'unknown') {
                             const split = result.label.split('|');
@@ -1379,7 +1392,17 @@
                             document.getElementById('face-guide-att').classList.remove('locked');
                         }
                     }
-                }, 200);
+                };
+
+                // Loop berantai: frame berikutnya langsung diproses begitu frame sebelumnya selesai
+                // (tanpa menunggu kelipatan 200 ms seperti setInterval).
+                const loop = async () => {
+                    if (myToken !== scanToken || !currentStream) return;
+                    try { await tick(); } catch (e) { console.error(e); }
+                    if (myToken !== scanToken || !currentStream) return;
+                    scanInterval = setTimeout(loop, 20);
+                };
+                loop();
             });
         }
 

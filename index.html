@@ -529,7 +529,7 @@
                                 <span class="text-xs mt-1 opacity-70 px-4 text-center">Tekan &quot;Nyalakan Scanner&quot; untuk memulai</span>
                             </div>
                         </div>
-                        <p class="mt-3 text-xs text-center text-[var(--ink-soft)] px-2">Posisikan wajah di dalam bingkai oval agar lebih cepat terdeteksi.</p>
+                        <p class="mt-3 text-xs text-center text-[var(--ink-soft)] px-2">Posisikan wajah di dalam bingkai oval, hadap lurus ke kamera, dan pastikan cahaya cukup agar lebih cepat terdeteksi.</p>
                         <div class="mt-5 flex flex-col sm:flex-row justify-center gap-3 max-w-sm mx-auto lg:max-w-none">
                             <button id="btn-start-att" class="w-full sm:w-auto bg-[var(--accent)] hover:opacity-90 text-white font-semibold py-3.5 sm:py-3 px-6 rounded-2xl transition flex items-center justify-center disabled:opacity-50">
                                 <i class="fa-solid fa-power-off mr-2"></i> Nyalakan Scanner
@@ -852,6 +852,7 @@
                 ]);
 
                 isAiLoaded = true;
+                warmUpModels();
                 document.getElementById('ai-loading').style.display = 'none';
 
                 fetchFacesFromDB();
@@ -1110,11 +1111,10 @@
         async function startCamera(videoElement) {
             if (currentStream) stopCamera();
             try {
-                // Resolusi dibatasi lebih kecil lagi (320x320) supaya setiap frame
-                // seringan mungkin diproses AI. Untuk kebutuhan absen (wajah dekat
-                // kamera), resolusi sekecil ini masih cukup untuk deteksi akurat.
+                // Resolusi 640x480: cukup ringan, tapi wajah yang dipotong AI untuk dikenali
+                // jauh lebih tajam dibanding 320x320 (penyebab utama wajah sulit cocok).
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 320 } },
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30 } },
                     audio: false
                 });
                 videoElement.srcObject = stream;
@@ -1136,6 +1136,81 @@
                 clearInterval(scanInterval);
                 scanInterval = null;
             }
+        }
+
+        // =========================================================
+        // PENINGKATAN DETEKSI WAJAH (lebih lancar & mudah terdeteksi)
+        // =========================================================
+        // Absensi: inputSize 224 (lebih mampu menangkap wajah yang agak jauh/kecil
+        // dibanding 160), scoreThreshold diturunkan supaya wajah lebih mudah "kena".
+        const DETECT_ATT = { inputSize: 224, scoreThreshold: 0.35 };
+        // Registrasi: lebih teliti karena hasilnya disimpan permanen sebagai data acuan.
+        const DETECT_ENR = { inputSize: 320, scoreThreshold: 0.4 };
+        // Wajah baru dianggap "hilang" setelah sekian frame gagal berturut-turut,
+        // supaya tampilan tidak berkedip kalau 1 frame saja meleset.
+        const MISS_TOLERANCE = 3;
+        // Registrasi mengambil rata-rata beberapa sampel wajah (lebih stabil & akurat
+        // daripada 1 foto tunggal), hasilnya tetap 1 descriptor sehingga format database sama.
+        const ENROLL_SAMPLES = 5;
+        let enrollSamples = [];
+
+        // Jalankan fungsi begitu video benar-benar berjalan. Aman dari dua masalah lama:
+        // (1) event 'play' yang terlewat, (2) listener 'play' menumpuk tiap kali scanner
+        // dinyalakan ulang (membuat proses AI berjalan ganda dan lag).
+        function runWhenPlaying(video, fn) {
+            if (!video.paused && !video.ended && video.readyState >= 2 && video.videoWidth > 0) {
+                fn();
+            } else {
+                video.addEventListener('play', fn, { once: true });
+            }
+        }
+
+        // Samakan resolusi canvas dengan ukuran tampilannya di layar.
+        function fitCanvasToVideo(canvas) {
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+            if (w && h && (canvas.width !== w || canvas.height !== h)) {
+                canvas.width = w;
+                canvas.height = h;
+            }
+        }
+
+        // Gambar kotak wajah dengan posisi yang tepat walau video di-crop (object-cover).
+        function drawFaceBox(canvas, video, box, color) {
+            fitCanvasToVideo(canvas);
+            const vw = video.videoWidth, vh = video.videoHeight;
+            if (!vw || !vh) return;
+            const cw = canvas.width, ch = canvas.height;
+            const scale = Math.max(cw / vw, ch / vh);
+            const offX = (cw - vw * scale) / 2, offY = (ch - vh * scale) / 2;
+            const x = box.x * scale + offX, y = box.y * scale + offY;
+            const w = box.width * scale, h = box.height * scale;
+            const L = Math.min(w, h) * 0.22;
+            const ctx = canvas.getContext('2d');
+            ctx.save();
+            ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.strokeStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
+            [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+                ctx.beginPath();
+                ctx.moveTo(cx + dx * L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * L);
+                ctx.stroke();
+            });
+            ctx.restore();
+        }
+
+        function averageDescriptors(list) {
+            const out = new Float32Array(list[0].length);
+            list.forEach(d => { for (let i = 0; i < out.length; i++) out[i] += d[i]; });
+            for (let i = 0; i < out.length; i++) out[i] /= list.length;
+            return out;
+        }
+
+        // Pemanasan model sekali di awal supaya deteksi pertama tidak "nyangkut".
+        async function warmUpModels() {
+            try {
+                const c = document.createElement('canvas');
+                c.width = 224; c.height = 224;
+                await faceapi.detectSingleFace(c, new faceapi.TinyFaceDetectorOptions(DETECT_ATT)).withFaceLandmarks().withFaceDescriptor();
+            } catch (e) { /* abaikan, hanya pemanasan */ }
         }
 
         // --- 5. Logika Tab Absensi (Pengenalan Realtime) ---
@@ -1180,38 +1255,45 @@
         }
 
         function startAttendanceScanning() {
-            videoAtt.addEventListener('play', () => {
+            runWhenPlaying(videoAtt, () => {
+                if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
                 const displaySize = { width: videoAtt.videoWidth, height: videoAtt.videoHeight };
-                faceapi.matchDimensions(canvasAtt, displaySize);
+                fitCanvasToVideo(canvasAtt);
 
                 let isBusyAtt = false;
+                let missAtt = 0;
                 scanInterval = setInterval(async () => {
                     if (videoAtt.paused || videoAtt.ended) return;
                     if (isBusyAtt) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
                     isBusyAtt = true;
 
-                    // detectSingleFace jauh lebih cepat daripada detectAllFaces:
-                    // yang dipakai memang cuma 1 wajah utama, jadi tidak perlu
-                    // menghitung descriptor untuk semua wajah di frame.
-                    // inputSize diturunkan dari 320 -> 224 supaya lebih ringan
-                    // (cukup akurat untuk jarak wajah ke kamera saat absen).
-                    // inputSize diturunkan lagi 224 -> 160 (nilai valid terkecil yang
-                    // masih wajar untuk face-api.js) supaya proses AI seringan mungkin.
-                    const detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 }))
-                                                    .withFaceLandmarks()
-                                                    .withFaceDescriptor();
+                    // detectSingleFace lebih cepat daripada detectAllFaces (hanya 1 wajah utama).
+                    // Opsi deteksi diatur di DETECT_ATT. try/catch memastikan satu error AI
+                    // tidak membuat proses macet permanen (isBusyAtt tidak tersangkut).
+                    let detection = null;
+                    try {
+                        detection = await faceapi.detectSingleFace(videoAtt, new faceapi.TinyFaceDetectorOptions(DETECT_ATT))
+                                                 .withFaceLandmarks()
+                                                 .withFaceDescriptor();
+                    } catch (e) { console.error(e); }
 
                     isBusyAtt = false;
 
+                    if (!currentStream) return; // scanner dimatikan saat AI masih memproses frame
+
+                    fitCanvasToVideo(canvasAtt);
                     canvasAtt.getContext('2d').clearRect(0, 0, canvasAtt.width, canvasAtt.height);
 
                     if (!detection) {
-                        resetAttendanceUI();
+                        // Anti-berkedip: baru reset tampilan kalau gagal beberapa frame berturut-turut
+                        missAtt++;
+                        if (missAtt >= MISS_TOLERANCE) resetAttendanceUI();
                         return;
                     }
+                    missAtt = 0;
 
                     const resizedDetection = faceapi.resizeResults(detection, displaySize);
-                    new faceapi.draw.DrawBox(resizedDetection.detection.box, { label: '', lineWidth: 3, boxColor: '#0E7C66' }).draw(canvasAtt);
+                    drawFaceBox(canvasAtt, videoAtt, resizedDetection.detection.box, '#34d399');
 
                     if (faceMatcher) {
                         const result = faceMatcher.findBestMatch(resizedDetection.descriptor);
@@ -1258,7 +1340,7 @@
                             document.getElementById('face-guide-att').classList.remove('locked');
                         }
                     }
-                }, 150);
+                }, 120);
             });
         }
 
@@ -1288,43 +1370,66 @@
         });
 
         function scanEnrollmentFace() {
-            videoEnr.addEventListener('play', () => {
-                const displaySize = { width: videoEnr.videoWidth, height: videoEnr.videoHeight };
-                faceapi.matchDimensions(canvasEnr, displaySize);
+            runWhenPlaying(videoEnr, () => {
+                if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+                fitCanvasToVideo(canvasEnr);
+                enrollSamples = [];
 
+                const statusEl = document.getElementById('enroll-status');
+                const guideEl = document.getElementById('face-guide-enr');
                 let isBusyEnr = false;
+                let missEnr = 0;
+
                 scanInterval = setInterval(async () => {
                     if (videoEnr.paused || videoEnr.ended) return;
                     if (isBusyEnr) return; // cegah proses menumpuk kalau frame sebelumnya belum selesai
                     isBusyEnr = true;
 
-                    const detection = await faceapi.detectSingleFace(videoEnr, new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }))
-                                                   .withFaceLandmarks()
-                                                   .withFaceDescriptor();
+                    let detection = null;
+                    try {
+                        detection = await faceapi.detectSingleFace(videoEnr, new faceapi.TinyFaceDetectorOptions(DETECT_ENR))
+                                                 .withFaceLandmarks()
+                                                 .withFaceDescriptor();
+                    } catch (e) { console.error(e); }
 
                     isBusyEnr = false;
 
+                    if (!currentStream) return;
+
+                    fitCanvasToVideo(canvasEnr);
                     canvasEnr.getContext('2d').clearRect(0, 0, canvasEnr.width, canvasEnr.height);
 
                     if (detection) {
-                        const resizedDetections = faceapi.resizeResults(detection, displaySize);
+                        missEnr = 0;
+                        drawFaceBox(canvasEnr, videoEnr, detection.detection.box, '#34d399');
 
-                        const box = resizedDetections.detection.box;
-                        const drawBox = new faceapi.draw.DrawBox(box, { label: 'Wajah Terdeteksi', lineWidth: 4, boxColor: '#4f46e5' });
-                        drawBox.draw(canvasEnr);
+                        // Hanya sampel yang cukup jelas yang dipakai
+                        if (detection.detection.score >= 0.6) {
+                            enrollSamples.push(detection.descriptor);
+                            if (enrollSamples.length > ENROLL_SAMPLES) enrollSamples.shift();
+                        }
 
-                        tempFaceDescriptor = detection.descriptor;
-                        document.getElementById('enroll-status').innerHTML = "<i class='fa-solid fa-check-circle text-green-600 mr-1'></i> Wajah siap didaftarkan!";
-                        document.getElementById('face-guide-enr').classList.add('locked');
-
+                        if (enrollSamples.length >= ENROLL_SAMPLES) {
+                            tempFaceDescriptor = averageDescriptors(enrollSamples);
+                            statusEl.innerHTML = "<i class='fa-solid fa-check-circle text-green-600 mr-1'></i> Wajah siap didaftarkan!";
+                            guideEl.classList.add('locked');
+                        } else {
+                            tempFaceDescriptor = null;
+                            statusEl.innerHTML = "<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Tahan posisi wajah... (" + enrollSamples.length + "/" + ENROLL_SAMPLES + ")";
+                            guideEl.classList.remove('locked');
+                        }
                         checkEnrollForm();
                     } else {
-                        tempFaceDescriptor = null;
-                        document.getElementById('enroll-status').innerHTML = "<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Mendeteksi wajah (Arahkan wajah ke kamera)...";
-                        document.getElementById('face-guide-enr').classList.remove('locked');
-                        btnEnrollSave.disabled = true;
+                        missEnr++;
+                        if (missEnr >= 2) {
+                            enrollSamples = [];
+                            tempFaceDescriptor = null;
+                            statusEl.innerHTML = "<i class='fa-solid fa-circle-notch fa-spin mr-1'></i> Mendeteksi wajah (Arahkan wajah ke kamera)...";
+                            guideEl.classList.remove('locked');
+                            btnEnrollSave.disabled = true;
+                        }
                     }
-                }, 400);
+                }, 300);
             });
         }
 

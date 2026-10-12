@@ -403,6 +403,86 @@
         .att-tips span { display:inline-flex; align-items:center; gap:.4rem; font-size:.72rem; font-weight:600; color:var(--ink-soft); background:rgba(14,124,102,.07); border:1px solid rgba(14,124,102,.12); padding:.35rem .75rem; border-radius:999px; }
         .att-tips i { color:var(--accent); font-size:.7rem; }
 
+
+        /* =====================================================
+           TAMPILAN HP (<640px): lebih lega, kamera lebih besar,
+           tabel rekap jadi kartu. Hanya CSS, JS tidak diubah.
+           ===================================================== */
+        @media (max-width:639px){
+            /* Cegah browser HP memperbesar layar saat mengetik */
+            input, select, textarea { font-size:16px !important; }
+
+            /* Hemat lebar: kurangi bingkai berlapis */
+            body > div.flex-grow { padding:.6rem .6rem 6.5rem !important; }
+            .card { border-radius:1.4rem; }
+
+            /* Header ringkas: nama tidak patah, tombol Keluar jadi ikon */
+            body > header > div { padding-left:.9rem; padding-right:.9rem; }
+            .hdr-user { gap:.5rem; }
+            .hdr-user .who b { white-space:nowrap; font-size:.8rem; }
+            .hdr-logout { font-size:0 !important; padding:.55rem .7rem; line-height:1; }
+            .hdr-logout i { font-size:.9rem; margin:0 !important; }
+
+            /* Judul kartu: ikon lebih kecil, lencana status ringkas */
+            .card h2 { font-size:1rem; }
+            .card h2 > i.fa-solid { width:1.9rem; height:1.9rem; margin-right:.5rem !important; }
+            #db-status-badge { font-size:.68rem; padding:.2rem .6rem; }
+
+            /* ---- Absensi ---- */
+            .att-body { padding:.8rem; gap:.75rem; }
+            #tab-attendance .video-wrapper { aspect-ratio:4/5; border-radius:1.35rem; }
+            #tab-attendance .face-guide { width:62%; height:64%; }
+            .att-actions button { width:100%; }
+            .att-status { padding:.85rem .95rem; }
+            .att-status #avatar-circle { margin:10px; width:3.5rem; height:3.5rem; }
+            .att-status #att-name { font-size:1.05rem; }
+            .att-tips span { font-size:.68rem; padding:.3rem .6rem; }
+
+            /* ---- Registrasi ---- */
+            #tab-enroll .video-wrapper { max-width:15rem; }
+            #tab-enroll .card > div[class*="p-4"] { padding:1rem; }
+
+            /* ---- Rekap: kartu statistik ---- */
+            .stat-grid { padding:.8rem .8rem 0; gap:.6rem; }
+            .stat-tile { display:grid; grid-template-columns:auto 1fr; align-items:center; column-gap:.65rem; row-gap:.4rem; padding:.7rem .8rem; }
+            .stat-tile > div:last-child { display:contents; }
+            .stat-tile b { font-size:1.35rem; }
+            .stat-tile span { grid-column:1 / -1; font-size:.72rem; white-space:nowrap; }
+            .stat-ico { width:2.3rem; height:2.3rem; border-radius:.8rem; font-size:.95rem; }
+            #tab-dashboard .stat-grid + p { display:none; }
+
+            /* ---- Rekap: tabel jadi daftar kartu (tanpa geser samping) ---- */
+            #tab-dashboard .overflow-x-auto { overflow:visible; padding:.8rem; }
+            #tab-dashboard table, #tab-dashboard tbody { display:block; width:100%; }
+            #tab-dashboard thead { display:none; }
+            #log-table-body { display:grid; gap:.65rem; }
+            #log-table-body tr,
+            #log-table-body tr:nth-child(even),
+            #log-table-body tr:hover {
+                display:grid; grid-template-columns:1fr 1fr; column-gap:.75rem; row-gap:.45rem;
+                background:#fff !important; border:1px solid var(--line); border-radius:1.1rem;
+                padding:.85rem .95rem; box-shadow:0 12px 22px -20px rgba(11,63,74,.7);
+            }
+            #log-table-body td { display:block; padding:0 !important; border:0; white-space:normal !important; font-size:.84rem; min-width:0; word-break:break-word; }
+            #log-table-body td::before { display:block; font-size:.62rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:.1rem; }
+            #log-table-body td:nth-child(4) { grid-column:1; grid-row:1; font-size:1rem; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif; align-self:center; }
+            #log-table-body td:nth-child(6) { grid-column:2; grid-row:1; justify-self:end; align-self:center; }
+            #log-table-body td:nth-child(1) { grid-column:1; grid-row:2; border-top:1px dashed var(--line); padding-top:.5rem !important; }
+            #log-table-body td:nth-child(2) { grid-column:2; grid-row:2; border-top:1px dashed var(--line); padding-top:.5rem !important; }
+            #log-table-body td:nth-child(3) { grid-column:1; grid-row:3; }
+            #log-table-body td:nth-child(5) { grid-column:2; grid-row:3; }
+            #log-table-body td:nth-child(7) { grid-column:1 / -1; grid-row:4; }
+            #log-table-body td:nth-child(1)::before { content:'Tanggal'; }
+            #log-table-body td:nth-child(2)::before { content:'Waktu'; }
+            #log-table-body td:nth-child(3)::before { content:'ID User'; }
+            #log-table-body td:nth-child(5)::before { content:'Kelas'; }
+            #log-table-body td:nth-child(7)::before { content:'Keterangan'; }
+            /* Baris pesan ("Memuat...", "Belum ada data") tetap polos */
+            #log-table-body tr:has(td[colspan]) { display:block; background:transparent !important; border:0; box-shadow:none; padding:.5rem 0; }
+            #log-table-body td[colspan] { display:block; grid-column:1 / -1; grid-row:auto; border:0; padding:1rem 0 !important; text-align:center; font-family:inherit; font-weight:500; font-size:.85rem; }
+            #log-table-body td[colspan]::before { display:none; }
+        }
+
         @media (prefers-reduced-motion: reduce){ *, *::before, *::after { animation:none !important; transition:none !important; } }
     </style>
 </head>
@@ -521,7 +601,7 @@
             </div>
             <div id="hdr-user" class="hdr-user">
                 <div class="who"><small>Masuk sebagai</small><b id="hdr-user-name">-</b></div>
-                <button type="button" class="hdr-logout" onclick="logoutGuru()"><i class="fa-solid fa-right-from-bracket mr-1"></i>Keluar</button>
+                <button type="button" class="hdr-logout" aria-label="Keluar" onclick="logoutGuru()"><i class="fa-solid fa-right-from-bracket mr-1"></i>Keluar</button>
             </div>
         </div>
     </header>
@@ -589,12 +669,12 @@
 
                         <div id="scan-pulse" class="absolute inset-0 bg-emerald-300 opacity-0 transition-opacity duration-500 rounded-2xl pointer-events-none"></div>
 
-                        <div class="relative z-10 w-full flex flex-col sm:flex-row items-center gap-3 sm:gap-5 text-center sm:text-left">
+                        <div class="relative z-10 w-full flex flex-row flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 sm:gap-5 text-left">
                             <div id="avatar-circle" class="w-16 h-16 shrink-0 rounded-full bg-white border-4 border-[var(--line)] shadow-sm flex items-center justify-center transition-all duration-300">
                                 <i class="fa-solid fa-user text-2xl text-gray-300"></i>
                             </div>
 
-                            <div class="flex-1 min-w-0 w-full">
+                            <div class="flex-1 min-w-0">
                                 <div class="panel-label"><span class="dot"></span>Status Pemindaian</div>
                                 <h3 id="att-name" class="display-font text-lg sm:text-xl font-bold break-words w-full">Mencari Wajah...</h3>
                                 <p id="att-confidence" class="text-sm text-[var(--ink-soft)]">-</p>

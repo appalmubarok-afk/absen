@@ -764,7 +764,7 @@
         let scanInterval = null;
 
         // Kontrol Absen Otomatis
-        const AUTO_THRESHOLD = 60;       // ambang akurasi minimal untuk auto-simpan (%)
+        const AUTO_THRESHOLD = 50;       // ambang akurasi minimal untuk auto-simpan (%) -- selaras dengan FaceMatcher 0.55 (wajah dikenali mulai ~45%)
         const AUTO_COOLDOWN_MS = 5000;   // jeda sebelum ID yang sama bisa absen otomatis lagi
         let isAutoSaving = false;
         let lastAutoId = null;
@@ -1550,6 +1550,9 @@
             document.getElementById('modal-msg').innerText = msg;
 
             const iconDiv = document.getElementById('modal-icon');
+            // Pulihkan <i> & tombol yang dihapus/disembunyikan oleh showLoadingModal()
+            if (!iconDiv.querySelector('i')) { iconDiv.innerHTML = '<i class="fa-solid"></i>'; }
+            document.querySelector('#custom-modal button').style.display = 'block';
             const iconEl = iconDiv.querySelector('i');
 
             iconDiv.className = "mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-4";
